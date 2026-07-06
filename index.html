@@ -1,0 +1,1105 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Дебертц</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Дебертц">
+<meta name="theme-color" content="#0f141b">
+<link rel="apple-touch-icon" href="./icon-180.png">
+<link rel="icon" type="image/png" href="./icon-192.png">
+<link rel="manifest" href="./manifest.json">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+:root {
+  --bg:#0f141b; --surface:#171f2a; --surface2:#1f2937; --border:rgba(255,255,255,0.09);
+  --text:#eef2f7; --text2:#aeb9c8; --muted:#7d8899; --grid:#26303e;
+  --t0:#c98500; --t1:#3987e5; --t0-soft:rgba(201,133,0,0.14); --t1-soft:rgba(57,135,229,0.14);
+  --danger:#e66767; --good:#0ca30c; --red:#e66767; --black:#cfd6df;
+}
+html,body { height:100%; }
+body {
+  background:var(--bg); color:var(--text);
+  font-family:system-ui,-apple-system,"Segoe UI",sans-serif; font-size:17px;
+  position:fixed; inset:0; overflow:hidden; width:100%;
+  overscroll-behavior:none; touch-action:manipulation;
+  -webkit-user-select:none; user-select:none; -webkit-touch-callout:none;
+}
+input { user-select:text; -webkit-user-select:text; }
+button { font:inherit; color:inherit; background:none; border:none; cursor:pointer; touch-action:manipulation; }
+#app { height:100dvh; display:flex; flex-direction:column;
+  padding:env(safe-area-inset-top) env(safe-area-inset-right) 0 env(safe-area-inset-left); }
+.hdr { display:flex; align-items:center; gap:8px; padding:10px 12px; min-height:56px; flex:0 0 auto; }
+.hdr.center { justify-content:center; }
+.brand { font-size:26px; font-weight:800; letter-spacing:0.5px; }
+.htitle { font-size:19px; font-weight:700; flex:1; text-align:center; }
+.hbtn { width:48px; height:44px; border-radius:12px; font-size:26px; color:var(--text2); flex:0 0 auto; }
+.hbtn:active { background:var(--surface2); }
+.hspace { width:48px; flex:0 0 auto; }
+.content { flex:1 1 auto; overflow-y:auto; -webkit-overflow-scrolling:touch;
+  padding:8px 16px calc(24px + env(safe-area-inset-bottom)); width:100%; max-width:760px; margin:0 auto; }
+.content.pad-fab { padding-bottom:calc(110px + env(safe-area-inset-bottom)); }
+.bigbtn { display:block; width:100%; min-height:64px; margin:12px 0; border-radius:16px;
+  background:var(--surface); border:1px solid var(--border); font-size:19px; font-weight:600; }
+.bigbtn:active { background:var(--surface2); }
+.bigbtn.primary { background:var(--t1); border-color:transparent; color:#fff; }
+.bigbtn.primary:active { filter:brightness(1.15); }
+.btn { min-height:48px; padding:10px 20px; border-radius:12px; background:var(--surface2);
+  border:1px solid var(--border); font-weight:600; font-size:16px; }
+.btn:active { filter:brightness(1.2); }
+.btn.primary { background:var(--t1); border-color:transparent; color:#fff; }
+.btn.danger { background:var(--danger); border-color:transparent; color:#fff; }
+.btn.ghost { background:transparent; }
+.btn.small { min-height:36px; padding:6px 14px; font-size:14px; }
+.btn[disabled] { opacity:0.4; pointer-events:none; }
+.card { background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:14px 16px; margin:12px 0; }
+.notice { display:flex; gap:10px; align-items:flex-start; font-size:14px; color:var(--text2); line-height:1.45; }
+.notice .nx { margin-left:auto; font-size:20px; color:var(--muted); padding:0 4px; flex:0 0 auto; }
+.sec { margin:20px 0; }
+.sec-title { font-size:13px; font-weight:700; text-transform:uppercase; letter-spacing:1px; color:var(--muted); margin-bottom:10px; }
+.cont-card { display:block; width:100%; text-align:left; background:var(--surface); border:1px solid var(--border);
+  border-radius:16px; padding:16px; margin:12px 0; }
+.cont-card:active { background:var(--surface2); }
+.cc-label { font-size:13px; color:var(--muted); text-transform:uppercase; letter-spacing:1px; margin-bottom:8px; }
+.cc-score { display:flex; align-items:center; gap:10px; font-size:16px; }
+.cc-score b { font-size:22px; white-space:nowrap; }
+.cc-score span { flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--text2); }
+.cc-score span:last-child { text-align:right; }
+.dot { display:inline-block; width:10px; height:10px; border-radius:50%; margin-right:6px; vertical-align:1px; }
+.dot.d0 { background:var(--t0); } .dot.d1 { background:var(--t1); }
+.board { display:flex; gap:10px; align-items:stretch; margin:8px 0 16px; }
+.team-card { flex:1; background:var(--surface); border:1px solid var(--border); border-radius:16px;
+  padding:12px 8px 14px; text-align:center; border-top:4px solid var(--t0); min-width:0; }
+.team-card.tc1 { border-top-color:var(--t1); }
+.tc-name { font-size:14px; color:var(--text2); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; padding:0 4px; }
+.tc-score { font-size:52px; font-weight:800; line-height:1.15; font-variant-numeric:tabular-nums; }
+.tc-crown { font-size:24px; }
+.pbar { height:5px; background:var(--surface2); border-radius:3px; margin:8px 10px 0; overflow:hidden; }
+.pbar i { display:block; height:100%; border-radius:3px; background:var(--t0); }
+.tc1 .pbar i { background:var(--t1); }
+.round-row { display:flex; align-items:center; width:100%; gap:6px; padding:11px 10px; border-radius:12px;
+  background:var(--surface); border:1px solid var(--border); margin:6px 0; text-align:center; }
+.round-row:active { background:var(--surface2); }
+.round-row.static:active { background:var(--surface); }
+.rn { width:26px; color:var(--muted); font-size:14px; flex:0 0 auto; }
+.rsuit { width:30px; font-size:21px; flex:0 0 auto; }
+.rtaker { flex:0 0 auto; width:34px; height:34px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+  font-size:15px; font-weight:700; background:var(--t0-soft); color:var(--t0); }
+.rtaker.rt1 { background:var(--t1-soft); color:var(--t1); }
+.rp { flex:1; font-size:19px; font-weight:700; font-variant-numeric:tabular-nums; }
+.rp i { display:block; font-style:normal; font-weight:400; font-size:12px; color:var(--muted); }
+.bait-badge { display:inline-block; font-size:11px; font-weight:800; color:#fff; background:var(--danger);
+  border-radius:6px; padding:1px 6px; vertical-align:2px; margin-left:5px; }
+.suit-red { color:var(--red); } .suit-black { color:var(--black); }
+.fab-wrap { position:fixed; left:0; right:0; bottom:0; padding:12px 16px calc(14px + env(safe-area-inset-bottom));
+  background:linear-gradient(to top, var(--bg) 60%, transparent); display:flex; justify-content:center; z-index:20; }
+.fab { width:100%; max-width:500px; min-height:60px; border-radius:16px; background:var(--t1); color:#fff;
+  font-size:20px; font-weight:700; box-shadow:0 6px 24px rgba(0,0,0,0.45); }
+.fab:active { filter:brightness(1.15); }
+.team-box { border:1px solid var(--border); border-radius:16px; padding:12px; margin:10px 0; background:var(--surface); border-left:4px solid var(--t0); }
+.team-box.tb1 { border-left-color:var(--t1); }
+.tb-title { font-size:13px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:1px; margin-bottom:8px; }
+.slots { display:flex; gap:10px; }
+.slot { flex:1; min-height:56px; border-radius:12px; border:1.5px dashed var(--grid); color:var(--muted);
+  display:flex; align-items:center; justify-content:center; font-size:16px; font-weight:600; padding:4px; }
+.slot.filled { border-style:solid; border-color:var(--border); background:var(--surface2); color:var(--text); }
+.slot.filled:active { background:var(--bg); }
+.chips { display:flex; flex-wrap:wrap; gap:10px; }
+.chip { min-height:48px; padding:10px 18px; border-radius:24px; background:var(--surface); border:1px solid var(--border); font-weight:600; }
+.chip:active { background:var(--surface2); }
+.chip.add { color:var(--t1); border-style:dashed; }
+.tinput { width:140px; min-height:52px; background:var(--surface); border:1px solid var(--border); border-radius:12px;
+  color:var(--text); font-size:20px; font-weight:700; text-align:center; padding:8px; }
+.tinput:focus { outline:none; border-color:var(--t1); }
+.sheet-backdrop { position:fixed; inset:0; background:rgba(5,8,12,0.72); z-index:50; }
+.sheet { position:fixed; inset:0; z-index:51; display:flex; flex-direction:column; background:var(--bg);
+  padding:env(safe-area-inset-top) env(safe-area-inset-right) 0 env(safe-area-inset-left); }
+.sheet-body { flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch; padding:0 16px 20px; width:100%; max-width:680px; margin:0 auto; }
+.sheet-foot { flex:0 0 auto; padding:10px 16px calc(12px + env(safe-area-inset-bottom));
+  background:var(--bg); border-top:1px solid var(--border); display:flex; justify-content:center; }
+.sheet-foot .btn { width:100%; max-width:500px; min-height:58px; font-size:19px; }
+.takers { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; }
+.taker { border-radius:14px; padding:10px 4px; background:var(--surface); border:2px solid var(--border);
+  display:flex; flex-direction:column; align-items:center; gap:6px; min-height:96px; }
+.taker .av { width:46px; height:46px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+  font-size:20px; font-weight:800; background:var(--surface2); }
+.taker.tt0 .av { background:var(--t0-soft); color:var(--t0); }
+.taker.tt1 .av { background:var(--t1-soft); color:var(--t1); }
+.taker .tk-name { font-size:13px; color:var(--text2); max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.taker.sel { border-color:var(--t1); background:var(--surface2); }
+.taker.sel.tt0 { border-color:var(--t0); }
+.suits { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; }
+.suitbtn { min-height:64px; font-size:34px; border-radius:14px; background:var(--surface); border:2px solid var(--border); }
+.suitbtn.sel { border-color:var(--text2); background:var(--surface2); }
+.decl-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+.decl-col { border-radius:14px; background:var(--surface); border:1px solid var(--border); padding:10px; border-top:3px solid var(--t0); }
+.decl-col.dc1 { border-top-color:var(--t1); }
+.decl-head { font-size:13px; font-weight:700; color:var(--text2); margin-bottom:8px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.decl-row { display:flex; align-items:center; justify-content:space-between; gap:6px; margin:8px 0; font-size:15px; color:var(--text2); }
+.step { display:flex; align-items:center; gap:2px; }
+.step button { width:42px; height:42px; border-radius:10px; background:var(--surface2); font-size:22px; color:var(--text); }
+.step button:active { filter:brightness(1.3); }
+.step b { width:30px; text-align:center; font-size:18px; }
+.bella-btn { width:100%; min-height:44px; border-radius:10px; background:var(--surface2); border:1.5px solid var(--border);
+  font-weight:600; font-size:15px; margin-top:4px; }
+.bella-btn.on { border-color:var(--good); color:var(--good); background:rgba(12,163,12,0.12); }
+.tricks { display:flex; gap:10px; margin-bottom:12px; }
+.trick-box { flex:1; border-radius:14px; background:var(--surface); border:2px solid var(--border); padding:10px; text-align:center; }
+.trick-box.active { border-color:var(--t0); }
+.trick-box.tb1.active { border-color:var(--t1); }
+.tb-name { font-size:13px; color:var(--muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.tb-val { font-size:38px; font-weight:800; min-height:48px; font-variant-numeric:tabular-nums; }
+.tb-val.empty { color:var(--muted); }
+.kapot-btn { width:100%; min-height:40px; border-radius:10px; background:var(--surface2); font-size:14px; font-weight:600; color:var(--text2); }
+.kapot-btn.on { background:var(--t0-soft); color:var(--t0); }
+.tb1 .kapot-btn.on { background:var(--t1-soft); color:var(--t1); }
+.numpad { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; max-width:420px; margin:0 auto; }
+.numpad.off { opacity:0.35; pointer-events:none; }
+.numpad button { min-height:60px; border-radius:14px; background:var(--surface); border:1px solid var(--border); font-size:26px; font-weight:600; }
+.numpad button:active { background:var(--surface2); }
+.preview { display:flex; align-items:center; justify-content:center; gap:14px; margin:18px 0 6px;
+  border-radius:14px; background:var(--surface); border:1px solid var(--border); padding:14px; }
+.preview.dim { color:var(--muted); font-size:15px; }
+.pv { font-size:30px; font-weight:800; font-variant-numeric:tabular-nums; }
+.pv-sep { font-size:22px; color:var(--muted); }
+.backdrop { position:fixed; inset:0; background:rgba(5,8,12,0.72); z-index:100; display:flex; align-items:center; justify-content:center; padding:24px; }
+.modal { width:100%; max-width:420px; background:var(--surface); border:1px solid var(--border); border-radius:18px; padding:20px; }
+.m-title { font-size:19px; font-weight:700; margin-bottom:8px; }
+.m-body { color:var(--text2); font-size:15px; line-height:1.5; margin-bottom:8px; }
+.m-input { width:100%; min-height:52px; margin:10px 0; background:var(--bg); border:1px solid var(--border); border-radius:12px;
+  color:var(--text); font-size:18px; padding:10px 14px; }
+.m-input:focus { outline:none; border-color:var(--t1); }
+.m-btns { display:flex; gap:10px; justify-content:flex-end; margin-top:14px; }
+.m-btns.stack { flex-direction:column; }
+.m-btns.stack .btn { width:100%; }
+.btn.danger-ghost { background:transparent; color:var(--danger); }
+.victory { text-align:center; padding:40px 20px; }
+.victory .vt { font-size:64px; }
+.victory h2 { font-size:26px; margin:12px 0 6px; }
+.victory .vs { font-size:40px; font-weight:800; margin:14px 0 30px; font-variant-numeric:tabular-nums; }
+.victory .btn { width:100%; max-width:360px; margin:8px auto; display:block; }
+#toast { position:fixed; left:0; right:0; bottom:calc(20px + env(safe-area-inset-bottom)); display:flex; justify-content:center;
+  z-index:150; pointer-events:none; opacity:0; transform:translateY(12px); transition:all 0.25s; }
+#toast.show { opacity:1; transform:none; pointer-events:auto; }
+.toast-box { background:var(--surface2); border:1px solid var(--border); border-radius:14px; padding:12px 18px;
+  font-size:15px; display:flex; align-items:center; gap:12px; box-shadow:0 6px 24px rgba(0,0,0,0.5); }
+.gcard { display:block; width:100%; text-align:left; background:var(--surface); border:1px solid var(--border);
+  border-radius:16px; padding:14px 16px; margin:10px 0; }
+.gcard:active { background:var(--surface2); }
+.gc-date { font-size:13px; color:var(--muted); margin-bottom:6px; }
+.gc-line { display:flex; align-items:center; gap:10px; font-size:15px; color:var(--text2); }
+.gc-line b { font-size:20px; color:var(--text); white-space:nowrap; font-variant-numeric:tabular-nums; }
+.gc-line span { flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.gc-line span:last-child { text-align:right; }
+.gc-line .win { color:var(--text); font-weight:700; }
+.tabs { display:flex; gap:8px; margin:4px 0 16px; }
+.tab { flex:1; min-height:46px; border-radius:12px; background:var(--surface); border:1px solid var(--border); font-weight:600; font-size:15px; color:var(--text2); }
+.tab.sel { background:var(--surface2); color:var(--text); border-color:var(--text2); }
+.stat-scroll { overflow-x:auto; margin:0 -16px; padding:0 16px; }
+.stat-table { width:100%; border-collapse:collapse; min-width:560px; }
+.stat-table th { font-size:12px; text-transform:uppercase; letter-spacing:0.5px; color:var(--muted); text-align:left; padding:8px 10px; border-bottom:1px solid var(--grid); white-space:nowrap; }
+.stat-table td { padding:11px 10px; border-bottom:1px solid var(--grid); font-size:15px; white-space:nowrap; font-variant-numeric:tabular-nums; }
+.stat-table td.pname { font-weight:700; }
+.wr { display:flex; align-items:center; gap:8px; min-width:120px; }
+.wr-bar { flex:1; height:8px; border-radius:4px; background:var(--surface2); overflow:hidden; min-width:60px; }
+.wr-bar i { display:block; height:100%; background:var(--t1); border-radius:4px; }
+.wr span { font-size:14px; color:var(--text2); width:38px; text-align:right; }
+.empty { text-align:center; color:var(--muted); padding:48px 20px; font-size:16px; line-height:1.5; }
+.prow { display:flex; align-items:center; gap:10px; padding:10px 0; border-bottom:1px solid var(--grid); }
+.prow span.pn { flex:1; font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.prow.arch span.pn { color:var(--muted); text-decoration:line-through; }
+.prow .btn { flex:0 0 auto; }
+.srow { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:12px 0; border-bottom:1px solid var(--grid); }
+.srow .sl { color:var(--text2); font-size:15px; }
+.file-btn { display:inline-flex; align-items:center; justify-content:center; }
+.settings-foot { text-align:center; color:var(--muted); font-size:13px; margin-top:32px; }
+.legend { display:flex; gap:18px; margin:6px 2px 8px; font-size:14px; color:var(--text2); }
+.legend i { display:inline-block; width:12px; height:4px; border-radius:2px; margin-right:6px; vertical-align:3px; }
+.legend .lg0 i { background:var(--t0); } .legend .lg1 i { background:var(--t1); }
+.chart-wrap { position:relative; background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:10px 6px 4px; }
+.chart { width:100%; height:auto; display:block; touch-action:pan-y; }
+.chart .grid { stroke:var(--grid); stroke-width:1; }
+.chart .tick { fill:var(--muted); font-size:12px; text-anchor:end; }
+.chart .tick.end { text-anchor:end; }
+.chart .target { stroke:var(--muted); stroke-width:1.5; stroke-dasharray:6 5; }
+.chart .l0 { stroke:var(--t0); } .chart .l1 { stroke:var(--t1); }
+.chart polyline { fill:none; stroke-width:2.5; stroke-linejoin:round; stroke-linecap:round; }
+.chart .pt0 { fill:var(--t0); stroke:var(--surface); stroke-width:2; }
+.chart .pt1 { fill:var(--t1); stroke:var(--surface); stroke-width:2; }
+.chart .cross { stroke:var(--text2); stroke-width:1; stroke-dasharray:3 3; visibility:hidden; }
+.chart-tip { position:absolute; top:8px; transform:translateX(-50%); background:var(--surface2); border:1px solid var(--border);
+  border-radius:10px; padding:6px 10px; font-size:13px; color:var(--text2); white-space:nowrap; visibility:hidden; pointer-events:none; }
+.mu-row { padding:14px 0; border-bottom:1px solid var(--grid); }
+.mu-names { display:flex; align-items:center; gap:10px; font-size:15px; }
+.mu-names b { font-size:20px; white-space:nowrap; font-variant-numeric:tabular-nums; }
+.mu-names span { flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--text2); }
+.mu-names span:last-child { text-align:right; }
+.mu-sub { font-size:13px; color:var(--muted); margin-top:4px; text-align:center; }
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div id="sheet-root"></div>
+<div id="modal-root"></div>
+<div id="toast"></div>
+<script>
+const APP_VERSION = '1.0.0';
+const KEY = 'deberc.data';
+const CUR_SCHEMA = 1;
+const DEAL_TOTAL = 162;
+const DECL_PTS = { terz: 20, fifty: 50, bella: 20 };
+const SUITS = { s: '♠', c: '♣', h: '♥', d: '♦' };
+const SUIT_CLS = { s: 'suit-black', c: 'suit-black', h: 'suit-red', d: 'suit-red' };
+const MIGRATIONS = {};
+const IS_IOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+const STANDALONE = navigator.standalone === true || matchMedia('(display-mode: standalone)').matches;
+let data = null;
+let storeLocked = false;
+let NG = null;
+let sheet = null;
+let victory = null;
+let statsTab = 'players';
+let toastTimer = null;
+let wakeLock = null;
+
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const uid = p => p + '_' + Math.random().toString(36).slice(2, 8) + Date.now().toString(36).slice(-4);
+const nowIso = () => new Date().toISOString();
+
+function defaults() {
+  return { schemaVersion: CUR_SCHEMA, settings: { defaultTarget: 1010, lastBackupAt: null, hintDismissed: false }, players: [], games: [] };
+}
+function migrate(d) {
+  while (d.schemaVersion < CUR_SCHEMA) d = MIGRATIONS[d.schemaVersion](d);
+  return d;
+}
+function loadData() {
+  let raw = null;
+  try { raw = localStorage.getItem(KEY); } catch {}
+  if (!raw) { data = defaults(); return; }
+  try {
+    let d = JSON.parse(raw);
+    if (typeof d.schemaVersion !== 'number' || !Array.isArray(d.players) || !Array.isArray(d.games)) throw new Error('shape');
+    if (d.schemaVersion > CUR_SCHEMA) {
+      data = defaults();
+      storeLocked = true;
+      setTimeout(() => uiAlert('Данные новее приложения', 'Сохранённые данные созданы более новой версией. Обновите приложение — сохранение отключено, чтобы ничего не потерять.'), 100);
+      return;
+    }
+    data = migrate(d);
+  } catch {
+    try { localStorage.setItem('deberc.corrupt', raw); } catch {}
+    data = defaults();
+    setTimeout(() => uiAlert('Данные повреждены', 'Не удалось прочитать сохранённые данные. Они отложены в резервный слот, приложение начато с чистого листа. Если есть бэкап — импортируйте его в Настройках.'), 100);
+  }
+}
+function save() {
+  if (storeLocked) return;
+  try { localStorage.setItem(KEY, JSON.stringify(data)); }
+  catch { uiAlert('Ошибка сохранения', 'Не удалось сохранить данные. Срочно сделайте экспорт в Настройках.'); }
+}
+
+function declPoints(d) {
+  return (d.terz || 0) * DECL_PTS.terz + (d.fifty || 0) * DECL_PTS.fifty + (d.bella ? DECL_PTS.bella : 0);
+}
+function scoreRound(round, teams) {
+  const takerTeam = teams.findIndex(t => t.includes(round.trumpTakerId));
+  const raw = [0, 1].map(i => round.trickPoints[i] + declPoints(round.declarations[i]));
+  const opp = 1 - takerTeam;
+  const bait = raw[takerTeam] < raw[opp];
+  let totals;
+  if (bait) {
+    totals = [0, 0];
+    totals[opp] = raw[0] + raw[1];
+  } else totals = raw;
+  return { totals, bait, takerTeam };
+}
+function gameRows(game) {
+  let cum = [0, 0];
+  return game.rounds.map(r => {
+    const s = scoreRound(r, game.teams);
+    cum = [cum[0] + s.totals[0], cum[1] + s.totals[1]];
+    return { round: r, totals: s.totals, bait: s.bait, takerTeam: s.takerTeam, cum: [...cum] };
+  });
+}
+function gameTotals(game) {
+  const rows = gameRows(game);
+  return rows.length ? rows[rows.length - 1].cum : [0, 0];
+}
+function detectWinner(totals, target) {
+  if (totals[0] < target && totals[1] < target) return null;
+  if (totals[0] === totals[1]) return null;
+  return totals[0] > totals[1] ? 0 : 1;
+}
+function kapotTeam(round) {
+  if (round.trickPoints[0] === DEAL_TOTAL) return 0;
+  if (round.trickPoints[1] === DEAL_TOTAL) return 1;
+  return null;
+}
+function runSelfTest() {
+  const teams = [['a', 'b'], ['c', 'd']];
+  const D0 = { terz: 0, fifty: 0, bella: false };
+  const R = (taker, tp, d0, d1) => ({ trumpTakerId: taker, trumpSuit: 'h', trickPoints: tp, declarations: [d0 || D0, d1 || D0], kapot: null });
+  const eq = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+  const cases = [
+    ['обычная раздача', scoreRound(R('a', [100, 62]), teams), { totals: [100, 62], bait: false }],
+    ['байт без комбинаций', scoreRound(R('a', [60, 102]), teams), { totals: [0, 162], bait: true }],
+    ['байт с терцем заказчика', scoreRound(R('a', [60, 102], { terz: 1, fifty: 0, bella: false }), teams), { totals: [0, 182], bait: true }],
+    ['комбинации спасают от байта', scoreRound(R('a', [70, 92], { terz: 0, fifty: 1, bella: false }), teams), { totals: [120, 92], bait: false }],
+    ['белла у соперника заказчика', scoreRound(R('a', [100, 62], D0, { terz: 0, fifty: 0, bella: true }), teams), { totals: [100, 82], bait: false }],
+    ['капот заказчика второй пары', scoreRound(R('c', [0, 162]), teams), { totals: [0, 162], bait: false }],
+    ['ничья — каждый пишет своё', scoreRound(R('a', [81, 81]), teams), { totals: [81, 81], bait: false }],
+    ['байт второй пары', scoreRound(R('d', [90, 72]), teams), { totals: [162, 0], bait: true }]
+  ];
+  const results = cases.map(([name, got, want]) => ({
+    case: name,
+    pass: eq(got.totals, want.totals) && got.bait === want.bait,
+    got: JSON.stringify(got.totals) + (got.bait ? ' БАЙТ' : ''),
+    want: JSON.stringify(want.totals) + (want.bait ? ' БАЙТ' : '')
+  }));
+  const w = [
+    ['победа одной пары', detectWinner([1015, 900], 1010), 0],
+    ['обе перешли — большая', detectWinner([1015, 1040], 1010), 1],
+    ['обе перешли поровну', detectWinner([1020, 1020], 1010), null],
+    ['никто не дошёл', detectWinner([1000, 1009], 1010), null]
+  ];
+  w.forEach(([name, got, want]) => results.push({ case: name, pass: got === want, got: String(got), want: String(want) }));
+  console.table(results);
+  return results.every(r => r.pass) ? 'SELF-TEST OK (' + results.length + ')' : 'SELF-TEST FAILED';
+}
+
+const playerById = id => data.players.find(p => p.id === id);
+const playerName = id => { const p = playerById(id); return p ? p.name : '?'; };
+const initial = id => (playerName(id).trim()[0] || '?').toUpperCase();
+const teamNames = (g, ti) => g.teams[ti].map(playerName).join(' + ');
+const activeGame = () => data.games.find(g => g.status === 'active');
+const finishedGames = () => data.games.filter(g => g.status === 'finished');
+const suitHtml = s => `<span class="${SUIT_CLS[s]}">${SUITS[s]}</span>`;
+function fmtDT(iso) {
+  const d = new Date(iso);
+  const sameYear = d.getFullYear() === new Date().getFullYear();
+  return d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', ...(sameYear ? {} : { year: 'numeric' }) })
+    + ', ' + d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+}
+
+function modal(opts) {
+  return new Promise(res => {
+    const w = document.createElement('div');
+    w.className = 'backdrop';
+    const btns = opts.buttons || [{ key: 'ok', label: 'OK', cls: 'primary' }];
+    w.innerHTML = `<div class="modal">
+      ${opts.title ? `<div class="m-title">${opts.title}</div>` : ''}
+      ${opts.body ? `<div class="m-body">${opts.body}</div>` : ''}
+      ${opts.input !== undefined ? `<input class="m-input" type="text" maxlength="24" value="${esc(opts.input)}">` : ''}
+      <div class="m-btns ${opts.stack ? 'stack' : ''}">${btns.map(b => `<button class="btn ${b.cls || 'ghost'}" data-k="${b.key}">${b.label}</button>`).join('')}</div>
+    </div>`;
+    document.getElementById('modal-root').appendChild(w);
+    const inp = w.querySelector('.m-input');
+    if (inp) setTimeout(() => { inp.focus(); inp.select(); }, 60);
+    w.addEventListener('click', e => {
+      const b = e.target.closest('[data-k]');
+      if (b) fin(b.dataset.k);
+      else if (e.target === w && opts.dismiss !== false) fin(null);
+    });
+    function fin(k) { w.remove(); res({ key: k, value: inp ? inp.value.trim() : null }); }
+  });
+}
+const uiAlert = (t, b) => modal({ title: t, body: b, buttons: [{ key: 'ok', label: 'OK', cls: 'primary' }] }).then(() => {});
+async function uiConfirm(t, b, ok = 'Да', danger = false) {
+  const r = await modal({ title: t, body: b, buttons: [{ key: 'no', label: 'Отмена', cls: 'ghost' }, { key: 'yes', label: ok, cls: danger ? 'danger' : 'primary' }] });
+  return r.key === 'yes';
+}
+async function uiPrompt(t, init = '') {
+  const r = await modal({ title: t, input: init, buttons: [{ key: 'no', label: 'Отмена', cls: 'ghost' }, { key: 'yes', label: 'Сохранить', cls: 'primary' }] });
+  return r.key === 'yes' ? r.value : null;
+}
+async function uiMenu(items) {
+  const r = await modal({ stack: true, buttons: items.map(i => ({ key: i.key, label: i.label, cls: i.danger ? 'danger-ghost' : '' })).concat([{ key: 'cancel', label: 'Отмена', cls: 'ghost' }]) });
+  return r.key;
+}
+function toast(msg, opts = {}) {
+  const el = document.getElementById('toast');
+  el.innerHTML = `<div class="toast-box">${msg}${opts.btn ? `<button class="btn small primary" data-action="${opts.action}">${opts.btn}</button>` : ''}</div>`;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  if (!opts.sticky) toastTimer = setTimeout(() => el.classList.remove('show'), 2600);
+}
+
+function route() { return location.hash.slice(1) || 'home'; }
+function nav(to) { location.hash = to; }
+
+function header(title, back, extra) {
+  return `<div class="hdr">
+    ${back ? `<button class="hbtn" data-action="nav" data-to="${back}">‹</button>` : '<div class="hspace"></div>'}
+    <div class="htitle">${title}</div>
+    ${extra || '<div class="hspace"></div>'}
+  </div>`;
+}
+
+function installHintHtml() {
+  return `<div class="card notice"><div>📲 Установите приложение: <b>Поделиться → На экран «Домой»</b>.<br>Данные хранятся внутри установленного приложения — вносите результаты после установки.</div><button class="nx" data-action="hintDismiss">✕</button></div>`;
+}
+function backupNagHtml() {
+  const fin = finishedGames();
+  if (!fin.length) return '';
+  const last = data.settings.lastBackupAt;
+  const since = fin.filter(g => !last || g.finishedAt > last).length;
+  if ((last && since < 5) || (!last && fin.length < 3)) return '';
+  return `<button class="card notice" style="width:100%;text-align:left" data-action="nav" data-to="settings"><div>💾 ${last ? 'С последнего бэкапа сыграно игр: ' + since : 'Бэкап ещё ни разу не делался'}. Экспортируйте данные в Настройках.</div></button>`;
+}
+function renderHome() {
+  const g = activeGame();
+  let cont = '';
+  if (g) {
+    const t = gameTotals(g);
+    cont = `<button class="cont-card" data-action="nav" data-to="game">
+      <div class="cc-label">Продолжить игру · до ${g.target}</div>
+      <div class="cc-score"><span><span class="dot d0"></span>${esc(teamNames(g, 0))}</span><b>${t[0]} : ${t[1]}</b><span>${esc(teamNames(g, 1))}<span class="dot d1" style="margin:0 0 0 6px"></span></span></div>
+    </button>`;
+  }
+  return `<div class="hdr center"><div class="brand">Дебертц</div></div>
+  <div class="content">
+    ${IS_IOS && !STANDALONE && !data.settings.hintDismissed ? installHintHtml() : ''}
+    ${backupNagHtml()}
+    ${cont}
+    <button class="bigbtn primary" data-action="goNew">Новая игра</button>
+    <button class="bigbtn" data-action="nav" data-to="history">История</button>
+    <button class="bigbtn" data-action="nav" data-to="stats">Статистика</button>
+    <button class="bigbtn" data-action="nav" data-to="settings">Настройки</button>
+  </div>`;
+}
+
+function renderNew() {
+  if (!NG) NG = { slots: [null, null, null, null], target: String(data.settings.defaultTarget) };
+  const roster = data.players.filter(p => !p.archived && !NG.slots.includes(p.id));
+  const slot = i => {
+    const pid = NG.slots[i];
+    return pid
+      ? `<button class="slot filled" data-action="clearSlot" data-i="${i}">${esc(playerName(pid))}</button>`
+      : `<div class="slot">Игрок</div>`;
+  };
+  const ready = NG.slots.every(Boolean) && parseInt(NG.target, 10) >= 50;
+  return header('Новая игра', 'home') + `<div class="content">
+    <div class="team-box"><div class="tb-title"><span class="dot d0"></span>Пара 1</div><div class="slots">${slot(0)}${slot(1)}</div></div>
+    <div class="team-box tb1"><div class="tb-title"><span class="dot d1"></span>Пара 2</div><div class="slots">${slot(2)}${slot(3)}</div></div>
+    <div class="sec"><div class="sec-title">Игроки — нажмите, чтобы посадить</div>
+      <div class="chips">
+        ${roster.map(p => `<button class="chip" data-action="pickPlayer" data-pid="${p.id}">${esc(p.name)}</button>`).join('')}
+        <button class="chip add" data-action="addPlayerNew">+ Добавить</button>
+      </div>
+      ${!data.players.filter(p => !p.archived).length ? '<div class="empty">Добавьте игроков, чтобы начать</div>' : ''}
+    </div>
+    <div class="sec"><div class="sec-title">Играем до</div>
+      <input class="tinput" inputmode="numeric" pattern="[0-9]*" value="${esc(NG.target)}" data-input="newTarget">
+    </div>
+    <button class="bigbtn primary" data-action="startGame" ${ready ? '' : 'disabled'}>Начать игру</button>
+  </div>`;
+}
+
+function roundRowHtml(g, row, idx, clickable) {
+  const badge = row.bait ? '<span class="bait-badge">Б</span>' : '';
+  return `<button class="round-row ${clickable ? '' : 'static'}" ${clickable ? `data-action="editRound" data-rid="${row.round.id}"` : ''}>
+    <span class="rn">${idx + 1}</span>
+    <span class="rsuit">${suitHtml(row.round.trumpSuit)}</span>
+    <span class="rtaker rt${row.takerTeam}">${initial(row.round.trumpTakerId)}</span>
+    <span class="rp">${row.totals[0]}${row.takerTeam === 0 ? badge : ''}<i>${row.cum[0]}</i></span>
+    <span class="rp">${row.totals[1]}${row.takerTeam === 1 ? badge : ''}<i>${row.cum[1]}</i></span>
+  </button>`;
+}
+function boardHtml(g, totals, winner) {
+  const pct = t => Math.min(100, Math.round(totals[t] / g.target * 100));
+  const card = t => `<div class="team-card tc${t}">
+    <div class="tc-name">${winner === t ? '<span class="tc-crown">🏆</span> ' : ''}${esc(teamNames(g, t))}</div>
+    <div class="tc-score">${totals[t]}</div>
+    <div class="pbar"><i style="width:${pct(t)}%"></i></div>
+  </div>`;
+  return `<div class="board">${card(0)}${card(1)}</div>`;
+}
+function renderGame() {
+  const g = activeGame();
+  const rows = gameRows(g);
+  const totals = rows.length ? rows[rows.length - 1].cum : [0, 0];
+  const list = rows.map((r, i) => roundRowHtml(g, r, i, true)).reverse().join('');
+  return header('До ' + g.target, 'home', '<button class="hbtn" data-action="gameMenu">⋯</button>') + `
+  <div class="content pad-fab">
+    ${boardHtml(g, totals, null)}
+    ${rows.length ? `<div class="sec-title">Раунды — нажмите, чтобы исправить</div>${list}` : '<div class="empty">Раундов пока нет.<br>Раздавайте карты и жмите «+ Раунд»</div>'}
+  </div>
+  <div class="fab-wrap"><button class="fab" data-action="openSheet">+ Раунд</button></div>`;
+}
+
+function renderHistory() {
+  const games = finishedGames().slice().sort((a, b) => (a.finishedAt < b.finishedAt ? 1 : -1));
+  const items = games.map(g => {
+    const t = gameTotals(g);
+    return `<button class="gcard" data-action="nav" data-to="game-view/${g.id}">
+      <div class="gc-date">${fmtDT(g.finishedAt)} · до ${g.target} · раундов: ${g.rounds.length}</div>
+      <div class="gc-line"><span class="${g.winnerTeam === 0 ? 'win' : ''}"><span class="dot d0"></span>${esc(teamNames(g, 0))}</span><b>${t[0]} : ${t[1]}</b><span class="${g.winnerTeam === 1 ? 'win' : ''}">${esc(teamNames(g, 1))}<span class="dot d1" style="margin:0 0 0 6px"></span></span></div>
+    </button>`;
+  }).join('');
+  return header('История', 'home') + `<div class="content">${items || '<div class="empty">Завершённых игр пока нет</div>'}</div>`;
+}
+
+const CH = { W: 640, H: 300, L: 48, R: 16, T: 16, B: 26 };
+function tickStep(m) { for (const s of [50, 100, 200, 250, 500, 1000, 2000]) if (m / s <= 6) return s; return 5000; }
+function chartSvg(g, rows) {
+  const n = rows.length;
+  if (!n) return '';
+  const maxY = Math.max(g.target, rows[n - 1].cum[0], rows[n - 1].cum[1]) * 1.06;
+  const X = i => CH.L + (CH.W - CH.L - CH.R) * i / n;
+  const Y = v => CH.H - CH.B - (CH.H - CH.T - CH.B) * v / maxY;
+  const line = t => [[0, 0]].concat(rows.map((r, i) => [i + 1, r.cum[t]])).map(p => X(p[0]).toFixed(1) + ',' + Y(p[1]).toFixed(1)).join(' ');
+  const step = tickStep(maxY);
+  let grid = '';
+  for (let v = 0; v <= maxY; v += step) grid += `<line class="grid" x1="${CH.L}" x2="${CH.W - CH.R}" y1="${Y(v).toFixed(1)}" y2="${Y(v).toFixed(1)}"/><text class="tick" x="${CH.L - 8}" y="${(Y(v) + 4).toFixed(1)}">${v}</text>`;
+  const ty = Y(g.target).toFixed(1);
+  const end = t => `<circle class="pt${t}" cx="${X(n).toFixed(1)}" cy="${Y(rows[n - 1].cum[t]).toFixed(1)}" r="4.5"/>`;
+  return `<div class="legend"><span class="lg0"><i></i>${esc(teamNames(g, 0))}</span><span class="lg1"><i></i>${esc(teamNames(g, 1))}</span></div>
+  <div class="chart-wrap">
+    <svg class="chart" viewBox="0 0 ${CH.W} ${CH.H}" data-n="${n}" data-gid="${g.id}">
+      ${grid}
+      <line class="target" x1="${CH.L}" x2="${CH.W - CH.R}" y1="${ty}" y2="${ty}"/>
+      <polyline class="l0" points="${line(0)}"/>
+      <polyline class="l1" points="${line(1)}"/>
+      ${end(0)}${end(1)}
+      <line class="cross" x1="0" x2="0" y1="${CH.T}" y2="${CH.H - CH.B}"/>
+    </svg>
+    <div class="chart-tip"></div>
+  </div>`;
+}
+function bindChart() {
+  const svg = document.querySelector('svg.chart');
+  if (!svg) return;
+  const g = data.games.find(x => x.id === svg.dataset.gid);
+  if (!g) return;
+  const rows = gameRows(g);
+  const n = rows.length;
+  const tip = document.querySelector('.chart-tip');
+  const cross = svg.querySelector('.cross');
+  const show = e => {
+    const rect = svg.getBoundingClientRect();
+    const fx = (e.clientX - rect.left) / rect.width * CH.W;
+    let i = Math.round((fx - CH.L) / ((CH.W - CH.L - CH.R) / n));
+    i = Math.max(1, Math.min(n, i));
+    const x = CH.L + (CH.W - CH.L - CH.R) * i / n;
+    cross.setAttribute('x1', x); cross.setAttribute('x2', x);
+    cross.style.visibility = 'visible';
+    const r = rows[i - 1];
+    tip.textContent = `Раунд ${i}: +${r.totals[0]} / +${r.totals[1]} · счёт ${r.cum[0]} : ${r.cum[1]}`;
+    tip.style.left = Math.max(18, Math.min(82, x / CH.W * 100)) + '%';
+    tip.style.visibility = 'visible';
+  };
+  const hide = () => { cross.style.visibility = 'hidden'; tip.style.visibility = 'hidden'; };
+  svg.addEventListener('pointerdown', show);
+  svg.addEventListener('pointermove', e => { if (e.buttons || e.pointerType === 'mouse') show(e); });
+  svg.addEventListener('pointerleave', hide);
+  svg.addEventListener('pointerup', () => setTimeout(hide, 1800));
+}
+function renderGameView(id) {
+  const g = data.games.find(x => x.id === id);
+  if (!g) return header('Игра', 'history') + '<div class="content"><div class="empty">Игра не найдена</div></div>';
+  const rows = gameRows(g);
+  const totals = rows.length ? rows[rows.length - 1].cum : [0, 0];
+  return header(fmtDT(g.finishedAt || g.createdAt), 'history') + `<div class="content">
+    ${boardHtml(g, totals, g.winnerTeam)}
+    ${chartSvg(g, rows)}
+    <div class="sec"><div class="sec-title">Раунды</div>${rows.map((r, i) => roundRowHtml(g, r, i, false)).join('')}</div>
+  </div>`;
+}
+
+function streaks(seq) {
+  let cur = 0, best = 0, run = 0;
+  for (const w of seq) { run = w ? run + 1 : 0; if (run > best) best = run; }
+  for (let i = seq.length - 1; i >= 0 && seq[i]; i--) cur++;
+  return { cur, best };
+}
+function computeStats() {
+  const games = finishedGames().slice().sort((a, b) => (a.finishedAt < b.finishedAt ? -1 : 1));
+  const P = {}, PAIR = {}, MU = {};
+  for (const g of games) {
+    const keys = g.teams.map(t => t.slice().sort().join('|'));
+    for (let ti = 0; ti < 2; ti++) {
+      const win = g.winnerTeam === ti;
+      for (const pid of g.teams[ti]) {
+        const s = P[pid] ??= { games: 0, wins: 0, calls: 0, callWins: 0, kapots: 0, seq: [] };
+        s.games++; if (win) s.wins++; s.seq.push(win);
+      }
+      const pk = PAIR[keys[ti]] ??= { key: keys[ti], games: 0, wins: 0 };
+      pk.games++; if (win) pk.wins++;
+    }
+    const mk = keys.slice().sort().join('~');
+    const m = MU[mk] ??= { keys: keys.slice().sort(), games: 0, wins: {} };
+    m.games++;
+    m.wins[keys[g.winnerTeam]] = (m.wins[keys[g.winnerTeam]] || 0) + 1;
+    for (const r of g.rounds) {
+      const sc = scoreRound(r, g.teams);
+      const ps = P[r.trumpTakerId];
+      if (ps) { ps.calls++; if (!sc.bait) ps.callWins++; }
+      const kt = kapotTeam(r);
+      if (kt !== null) for (const pid of g.teams[kt]) if (P[pid]) P[pid].kapots++;
+    }
+  }
+  return { P, PAIR, MU };
+}
+const pct = (a, b) => b ? Math.round(a / b * 100) : 0;
+const wrHtml = p => `<div class="wr"><div class="wr-bar"><i style="width:${p}%"></i></div><span>${p}%</span></div>`;
+const pairLabel = key => key.split('|').map(playerName).join(' + ');
+function renderStats() {
+  const { P, PAIR, MU } = computeStats();
+  const tabs = `<div class="tabs">
+    <button class="tab ${statsTab === 'players' ? 'sel' : ''}" data-action="statsTab" data-tab="players">Игроки</button>
+    <button class="tab ${statsTab === 'pairs' ? 'sel' : ''}" data-action="statsTab" data-tab="pairs">Пары</button>
+    <button class="tab ${statsTab === 'vs' ? 'sel' : ''}" data-action="statsTab" data-tab="vs">Встречи</button>
+  </div>`;
+  let body = '';
+  if (!finishedGames().length) body = '<div class="empty">Статистика появится после первой завершённой игры</div>';
+  else if (statsTab === 'players') {
+    const rows = Object.entries(P)
+      .sort((a, b) => pct(b[1].wins, b[1].games) - pct(a[1].wins, a[1].games) || b[1].games - a[1].games)
+      .map(([pid, s]) => {
+        const st = streaks(s.seq);
+        return `<tr><td class="pname">${esc(playerName(pid))}</td><td>${s.games}</td><td>${s.wins}</td><td>${wrHtml(pct(s.wins, s.games))}</td><td>${st.cur} / ${st.best}</td><td>${s.calls ? s.calls + ' (' + pct(s.callWins, s.calls) + '%)' : '—'}</td><td>${s.kapots || '—'}</td></tr>`;
+      }).join('');
+    body = `<div class="stat-scroll"><table class="stat-table">
+      <thead><tr><th>Игрок</th><th>Игры</th><th>Победы</th><th>Винрейт</th><th>Серия</th><th>Заказы (успех)</th><th>Капоты</th></tr></thead>
+      <tbody>${rows}</tbody></table></div>`;
+  } else if (statsTab === 'pairs') {
+    const rows = Object.values(PAIR)
+      .sort((a, b) => pct(b.wins, b.games) - pct(a.wins, a.games) || b.games - a.games)
+      .map(s => `<tr><td class="pname">${esc(pairLabel(s.key))}</td><td>${s.games}</td><td>${s.wins}</td><td>${wrHtml(pct(s.wins, s.games))}</td></tr>`).join('');
+    body = `<div class="stat-scroll"><table class="stat-table" style="min-width:420px">
+      <thead><tr><th>Пара</th><th>Игры</th><th>Победы</th><th>Винрейт</th></tr></thead>
+      <tbody>${rows}</tbody></table></div>`;
+  } else {
+    body = Object.values(MU).sort((a, b) => b.games - a.games).map(m => {
+      const [ka, kb] = m.keys;
+      return `<div class="mu-row">
+        <div class="mu-names"><span>${esc(pairLabel(ka))}</span><b>${m.wins[ka] || 0} : ${m.wins[kb] || 0}</b><span>${esc(pairLabel(kb))}</span></div>
+        <div class="mu-sub">игр: ${m.games}</div>
+      </div>`;
+    }).join('') || '<div class="empty">Встреч пока нет</div>';
+  }
+  return header('Статистика', 'home') + `<div class="content">${tabs}${body}</div>`;
+}
+
+function renderSettings() {
+  const players = data.players.slice().sort((a, b) => a.archived - b.archived || a.name.localeCompare(b.name, 'ru'));
+  const plist = players.map(p => `<div class="prow ${p.archived ? 'arch' : ''}">
+    <span class="pn">${esc(p.name)}</span>
+    <button class="btn small ghost" data-action="renamePlayer" data-pid="${p.id}">✎</button>
+    <button class="btn small ghost" data-action="toggleArchive" data-pid="${p.id}">${p.archived ? 'Вернуть' : 'Скрыть'}</button>
+  </div>`).join('');
+  const lb = data.settings.lastBackupAt;
+  return header('Настройки', 'home') + `<div class="content">
+    <div class="sec"><div class="sec-title">Игра</div>
+      <div class="srow"><span class="sl">Цель по умолчанию</span>
+      <input class="tinput" inputmode="numeric" pattern="[0-9]*" value="${data.settings.defaultTarget}" data-input="defaultTarget"></div>
+    </div>
+    <div class="sec"><div class="sec-title">Игроки</div>
+      ${plist || '<div class="empty">Игроков пока нет</div>'}
+      <button class="btn ghost" style="margin-top:10px;color:var(--t1)" data-action="addPlayer">+ Добавить игрока</button>
+    </div>
+    <div class="sec"><div class="sec-title">Данные</div>
+      <div class="srow"><span class="sl">Игр сыграно: ${finishedGames().length} · игроков: ${data.players.length}</span></div>
+      <div class="srow"><span class="sl">Последний бэкап: ${lb ? fmtDT(lb) : 'никогда'}</span></div>
+      <div style="display:flex;gap:10px;margin-top:12px;flex-wrap:wrap">
+        <button class="btn primary" data-action="exportData">Экспорт данных</button>
+        <label class="btn ghost file-btn">Импорт данных<input type="file" accept=".json,application/json" data-change="importFile" hidden></label>
+      </div>
+    </div>
+    <div class="settings-foot">Дебертц v${APP_VERSION}</div>
+  </div>`;
+}
+
+function sheetTricks() {
+  if (sheet.kapot !== null) return sheet.kapot === 0 ? [DEAL_TOTAL, 0] : [0, DEAL_TOTAL];
+  if (sheet.tricksStr === '') return null;
+  const v = parseInt(sheet.tricksStr, 10);
+  if (isNaN(v) || v < 0 || v > DEAL_TOTAL) return null;
+  return sheet.side === 0 ? [v, DEAL_TOTAL - v] : [DEAL_TOTAL - v, v];
+}
+function sheetRound(tp) {
+  return {
+    trumpTakerId: sheet.takerId, trumpSuit: sheet.suit, trickPoints: tp,
+    declarations: [{ ...sheet.decl[0] }, { ...sheet.decl[1] }], kapot: sheet.kapot
+  };
+}
+function sheetValid() {
+  return !!(sheet.takerId && sheet.suit && sheetTricks());
+}
+function renderSheet() {
+  const g = activeGame();
+  if (!g || !sheet) return '';
+  const order = [g.teams[0][0], g.teams[0][1], g.teams[1][0], g.teams[1][1]];
+  const takers = order.map((pid, i) => {
+    const ti = i < 2 ? 0 : 1;
+    return `<button class="taker tt${ti} ${sheet.takerId === pid ? 'sel' : ''}" data-action="sheetTaker" data-pid="${pid}">
+      <span class="av">${initial(pid)}</span><span class="tk-name">${esc(playerName(pid))}</span>
+    </button>`;
+  }).join('');
+  const suits = Object.keys(SUITS).map(s =>
+    `<button class="suitbtn ${SUIT_CLS[s]} ${sheet.suit === s ? 'sel' : ''}" data-action="sheetSuit" data-s="${s}">${SUITS[s]}</button>`).join('');
+  const declCol = t => `<div class="decl-col dc${t}">
+    <div class="decl-head">${esc(teamNames(g, t))}</div>
+    <div class="decl-row"><span>Терц</span><div class="step">
+      <button data-action="declStep" data-t="${t}" data-kind="terz" data-d="-1">−</button><b>${sheet.decl[t].terz}</b><button data-action="declStep" data-t="${t}" data-kind="terz" data-d="1">+</button></div></div>
+    <div class="decl-row"><span>Полтинник</span><div class="step">
+      <button data-action="declStep" data-t="${t}" data-kind="fifty" data-d="-1">−</button><b>${sheet.decl[t].fifty}</b><button data-action="declStep" data-t="${t}" data-kind="fifty" data-d="1">+</button></div></div>
+    <button class="bella-btn ${sheet.decl[t].bella ? 'on' : ''}" data-action="bella" data-t="${t}">Белла ${sheet.decl[t].bella ? '✓' : ''}</button>
+  </div>`;
+  const tp = sheetTricks();
+  const trickBox = t => `<div class="trick-box tb${t} ${sheet.kapot === null && sheet.side === t ? 'active' : ''}" data-action="sheetSide" data-i="${t}">
+    <div class="tb-name">${esc(teamNames(g, t))}</div>
+    <div class="tb-val ${tp ? '' : 'empty'}">${tp ? tp[t] : '·'}</div>
+    <button class="kapot-btn ${sheet.kapot === t ? 'on' : ''}" data-action="kapot" data-t="${t}">Капот ${sheet.kapot === t ? '✓' : ''}</button>
+  </div>`;
+  const pad = `<div class="numpad ${sheet.kapot !== null ? 'off' : ''}">
+    ${[1,2,3,4,5,6,7,8,9].map(d => `<button data-action="pad" data-d="${d}">${d}</button>`).join('')}
+    <button data-action="pad" data-d="clear">C</button><button data-action="pad" data-d="0">0</button><button data-action="pad" data-d="back">⌫</button>
+  </div>`;
+  let preview;
+  if (sheet.takerId && tp) {
+    const s = scoreRound(sheetRound(tp), g.teams);
+    const badge = t => s.bait && s.takerTeam === t ? ' <span class="bait-badge">БАЙТ</span>' : '';
+    preview = `<div class="preview"><div class="pv" style="color:var(--t0)">${s.totals[0]}${badge(0)}</div><div class="pv-sep">:</div><div class="pv" style="color:var(--t1)">${s.totals[1]}${badge(1)}</div></div>`;
+  } else preview = '<div class="preview dim">Итог раунда появится после ввода</div>';
+  const n = sheet.editId ? g.rounds.findIndex(r => r.id === sheet.editId) + 1 : g.rounds.length + 1;
+  return `<div class="sheet-backdrop"></div><div class="sheet">
+    <div class="hdr"><button class="hbtn" data-action="sheetClose">✕</button><div class="htitle">Раунд ${n}</div><div class="hspace"></div></div>
+    <div class="sheet-body">
+      <div class="sec"><div class="sec-title">Кто заказал козырь</div><div class="takers">${takers}</div></div>
+      <div class="sec"><div class="sec-title">Козырь</div><div class="suits">${suits}</div></div>
+      <div class="sec"><div class="sec-title">Комбинации</div><div class="decl-grid">${declCol(0)}${declCol(1)}</div></div>
+      <div class="sec"><div class="sec-title">Очки за взятки (всего ${DEAL_TOTAL})</div><div class="tricks">${trickBox(0)}${trickBox(1)}</div>${pad}</div>
+      ${preview}
+    </div>
+    <div class="sheet-foot"><button class="btn primary" data-action="sheetSave" ${sheetValid() ? '' : 'disabled'}>Записать</button></div>
+  </div>`;
+}
+function renderVictory() {
+  const g = data.games.find(x => x.id === victory);
+  if (!g) return '';
+  const t = gameTotals(g);
+  const w = g.winnerTeam;
+  return `<div class="sheet-backdrop"></div><div class="sheet"><div class="sheet-body victory">
+    <div class="vt">🏆</div>
+    <h2>${esc(teamNames(g, w))}</h2>
+    <div style="color:var(--muted)">победа в игре до ${g.target}</div>
+    <div class="vs"><span style="color:var(--t0)">${t[0]}</span> : <span style="color:var(--t1)">${t[1]}</span></div>
+    <button class="btn primary" data-action="victoryDone">Готово</button>
+    <button class="btn ghost" data-action="victoryFix">Исправить последний раунд</button>
+  </div></div>`;
+}
+function renderOverlays() {
+  document.getElementById('sheet-root').innerHTML = victory ? renderVictory() : (sheet ? renderSheet() : '');
+}
+function updateSheet() {
+  const el = document.querySelector('.sheet-body');
+  const st = el ? el.scrollTop : 0;
+  renderOverlays();
+  const el2 = document.querySelector('.sheet-body');
+  if (el2) el2.scrollTop = st;
+}
+
+function render() {
+  let r = route();
+  if (r === 'game' && !activeGame()) { location.replace('#home'); return; }
+  const app = document.getElementById('app');
+  if (r === 'home') app.innerHTML = renderHome();
+  else if (r === 'new') app.innerHTML = renderNew();
+  else if (r === 'game') app.innerHTML = renderGame();
+  else if (r === 'history') app.innerHTML = renderHistory();
+  else if (r.startsWith('game-view/')) app.innerHTML = renderGameView(r.slice(10));
+  else if (r === 'stats') app.innerHTML = renderStats();
+  else if (r === 'settings') app.innerHTML = renderSettings();
+  else { location.replace('#home'); return; }
+  if (r.startsWith('game-view/')) bindChart();
+  syncWakeLock();
+}
+
+async function addPlayerFlow() {
+  const name = await uiPrompt('Имя игрока');
+  if (!name) return null;
+  if (data.players.some(p => p.name.toLowerCase() === name.toLowerCase())) { toast('Такой игрок уже есть'); return null; }
+  const p = { id: uid('p'), name, createdAt: nowIso(), archived: false };
+  data.players.push(p);
+  save();
+  return p;
+}
+function finishGame(g, w) {
+  g.status = 'finished';
+  g.winnerTeam = w;
+  g.finishedAt = nowIso();
+  save();
+  sheet = null;
+  victory = g.id;
+  renderOverlays();
+  render();
+}
+
+const ACTIONS = {
+  nav: d => nav(d.to),
+  hintDismiss: () => { data.settings.hintDismissed = true; save(); render(); },
+  reloadApp: () => location.reload(),
+  goNew: async () => {
+    const g = activeGame();
+    if (g) {
+      const ok = await uiConfirm('Незавершённая игра', 'Начать новую можно, только удалив текущую игру. Удалить её без сохранения?', 'Удалить и начать', true);
+      if (!ok) return;
+      data.games = data.games.filter(x => x !== g);
+      save();
+    }
+    NG = { slots: [null, null, null, null], target: String(data.settings.defaultTarget) };
+    nav('new');
+  },
+  pickPlayer: d => {
+    const i = NG.slots.indexOf(null);
+    if (i === -1) return;
+    NG.slots[i] = d.pid;
+    render();
+  },
+  clearSlot: d => { NG.slots[+d.i] = null; render(); },
+  addPlayerNew: async () => {
+    const p = await addPlayerFlow();
+    if (p) { const i = NG.slots.indexOf(null); if (i !== -1) NG.slots[i] = p.id; }
+    render();
+  },
+  startGame: () => {
+    if (!NG.slots.every(Boolean)) return;
+    const t = parseInt(NG.target, 10);
+    if (!(t >= 50)) { toast('Некорректная цель игры'); return; }
+    data.games.push({
+      id: uid('g'), createdAt: nowIso(), finishedAt: null, status: 'active',
+      target: t, teams: [[NG.slots[0], NG.slots[1]], [NG.slots[2], NG.slots[3]]],
+      winnerTeam: null, rounds: []
+    });
+    save();
+    NG = null;
+    nav('game');
+  },
+  openSheet: () => {
+    sheet = { editId: null, takerId: null, suit: null, decl: [{ terz: 0, fifty: 0, bella: false }, { terz: 0, fifty: 0, bella: false }], side: 0, tricksStr: '', kapot: null };
+    renderOverlays();
+  },
+  editRound: d => {
+    const g = activeGame();
+    const r = g.rounds.find(x => x.id === d.rid);
+    if (!r) return;
+    sheet = {
+      editId: r.id, takerId: r.trumpTakerId, suit: r.trumpSuit,
+      decl: [{ ...r.declarations[0] }, { ...r.declarations[1] }],
+      side: 0, tricksStr: String(r.trickPoints[0]), kapot: r.kapot ?? kapotTeam(r)
+    };
+    renderOverlays();
+  },
+  sheetClose: () => { sheet = null; renderOverlays(); },
+  sheetTaker: d => { sheet.takerId = d.pid; updateSheet(); },
+  sheetSuit: d => { sheet.suit = d.s; updateSheet(); },
+  declStep: d => {
+    const t = +d.t, max = d.kind === 'terz' ? 4 : 2;
+    const v = sheet.decl[t][d.kind] + (+d.d);
+    sheet.decl[t][d.kind] = Math.max(0, Math.min(max, v));
+    updateSheet();
+  },
+  bella: d => {
+    const t = +d.t;
+    sheet.decl[t].bella = !sheet.decl[t].bella;
+    if (sheet.decl[t].bella) sheet.decl[1 - t].bella = false;
+    updateSheet();
+  },
+  sheetSide: d => {
+    if (sheet.kapot !== null) return;
+    const t = +d.i;
+    if (sheet.side === t) return;
+    const tp = sheetTricks();
+    sheet.side = t;
+    sheet.tricksStr = tp ? String(tp[t]) : '';
+    updateSheet();
+  },
+  kapot: d => {
+    const t = +d.t;
+    sheet.kapot = sheet.kapot === t ? null : t;
+    if (sheet.kapot === null) sheet.tricksStr = '';
+    updateSheet();
+  },
+  pad: d => {
+    if (d.d === 'clear') sheet.tricksStr = '';
+    else if (d.d === 'back') sheet.tricksStr = sheet.tricksStr.slice(0, -1);
+    else {
+      const next = sheet.tricksStr === '0' ? d.d : sheet.tricksStr + d.d;
+      if (next.length <= 3 && parseInt(next, 10) <= DEAL_TOTAL) sheet.tricksStr = next;
+    }
+    updateSheet();
+  },
+  sheetSave: async () => {
+    if (!sheetValid()) return;
+    const g = activeGame();
+    const tp = sheetTricks();
+    const base = sheetRound(tp);
+    if (sheet.editId) {
+      const i = g.rounds.findIndex(r => r.id === sheet.editId);
+      g.rounds[i] = { ...base, id: sheet.editId, createdAt: g.rounds[i].createdAt };
+    } else {
+      g.rounds.push({ ...base, id: uid('r'), createdAt: nowIso() });
+    }
+    save();
+    const w = detectWinner(gameTotals(g), g.target);
+    if (w !== null) {
+      if (sheet.editId) {
+        sheet = null;
+        renderOverlays();
+        render();
+        const ok = await uiConfirm('Цель достигнута', `Пара «${esc(teamNames(g, w))}» набрала ${gameTotals(g)[w]} из ${g.target}. Завершить игру?`, 'Завершить');
+        if (ok) finishGame(g, w);
+      } else finishGame(g, w);
+    } else {
+      sheet = null;
+      renderOverlays();
+      render();
+    }
+  },
+  gameMenu: async () => {
+    const g = activeGame();
+    const items = [];
+    if (g.rounds.length) items.push({ key: 'del', label: 'Удалить последний раунд', danger: true });
+    items.push({ key: 'abort', label: 'Удалить игру', danger: true });
+    const k = await uiMenu(items);
+    if (k === 'del') {
+      const ok = await uiConfirm('Удалить раунд', 'Последний раунд будет удалён.', 'Удалить', true);
+      if (ok) { g.rounds.pop(); save(); render(); }
+    } else if (k === 'abort') {
+      const ok = await uiConfirm('Удалить игру', 'Игра будет удалена без сохранения результата.', 'Удалить', true);
+      if (ok) { data.games = data.games.filter(x => x !== g); save(); nav('home'); }
+    }
+  },
+  victoryDone: () => { victory = null; renderOverlays(); nav('home'); },
+  victoryFix: () => {
+    const g = data.games.find(x => x.id === victory);
+    victory = null;
+    g.status = 'active';
+    g.winnerTeam = null;
+    g.finishedAt = null;
+    save();
+    const last = g.rounds[g.rounds.length - 1];
+    render();
+    ACTIONS.editRound({ rid: last.id });
+  },
+  statsTab: d => { statsTab = d.tab; render(); },
+  addPlayer: async () => { await addPlayerFlow(); render(); },
+  renamePlayer: async d => {
+    const p = playerById(d.pid);
+    const name = await uiPrompt('Имя игрока', p.name);
+    if (name && !data.players.some(x => x.id !== p.id && x.name.toLowerCase() === name.toLowerCase())) {
+      p.name = name;
+      save();
+    }
+    render();
+  },
+  toggleArchive: d => {
+    const p = playerById(d.pid);
+    const g = activeGame();
+    if (!p.archived && g && g.teams.flat().includes(p.id)) { toast('Игрок в текущей игре'); return; }
+    p.archived = !p.archived;
+    save();
+    render();
+  },
+  exportData: () => doExport()
+};
+
+async function doExport() {
+  const json = JSON.stringify(data, null, 2);
+  const name = 'deberc-backup-' + new Date().toISOString().slice(0, 10) + '.json';
+  let done = false;
+  if (navigator.canShare) {
+    const file = new File([json], name, { type: 'application/json' });
+    if (navigator.canShare({ files: [file] })) {
+      try { await navigator.share({ files: [file] }); done = true; }
+      catch (e) { if (e.name === 'AbortError') return; }
+    }
+  }
+  if (!done) {
+    const url = URL.createObjectURL(new Blob([json], { type: 'application/json' }));
+    const a = document.createElement('a');
+    a.href = url; a.download = name;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 5000);
+  }
+  data.settings.lastBackupAt = nowIso();
+  save();
+  render();
+  toast('Бэкап сохранён');
+}
+async function doImport(file) {
+  let d;
+  try { d = JSON.parse(await file.text()); }
+  catch { return uiAlert('Ошибка', 'Файл не является корректным JSON.'); }
+  if (typeof d.schemaVersion !== 'number' || !Array.isArray(d.players) || !Array.isArray(d.games)) return uiAlert('Ошибка', 'Это не файл бэкапа Дебертца.');
+  if (d.schemaVersion > CUR_SCHEMA) return uiAlert('Ошибка', 'Бэкап создан более новой версией приложения.');
+  d = migrate(d);
+  const ok = await uiConfirm('Импорт данных', `Текущие данные (игр: ${data.games.length}, игроков: ${data.players.length}) будут заменены содержимым файла (игр: ${d.games.length}, игроков: ${d.players.length}).`, 'Заменить', true);
+  if (!ok) return;
+  try { localStorage.setItem('deberc.prev', JSON.stringify(data)); } catch {}
+  data = d;
+  save();
+  render();
+  toast('Данные импортированы');
+}
+
+async function syncWakeLock() {
+  const want = route() === 'game' && document.visibilityState === 'visible';
+  if (want && !wakeLock && 'wakeLock' in navigator) {
+    try {
+      wakeLock = await navigator.wakeLock.request('screen');
+      wakeLock.addEventListener('release', () => { wakeLock = null; });
+    } catch {}
+  } else if (!want && wakeLock) {
+    try { await wakeLock.release(); } catch {}
+    wakeLock = null;
+  }
+}
+
+document.addEventListener('click', e => {
+  const el = e.target.closest('[data-action]');
+  if (!el || el.disabled) return;
+  const fn = ACTIONS[el.dataset.action];
+  if (fn) fn(el.dataset, el);
+});
+document.addEventListener('input', e => {
+  const el = e.target.closest('[data-input]');
+  if (!el) return;
+  if (el.dataset.input === 'newTarget' && NG) {
+    NG.target = el.value.replace(/\D/g, '');
+    const btn = document.querySelector('[data-action="startGame"]');
+    if (btn) btn.disabled = !(NG.slots.every(Boolean) && parseInt(NG.target, 10) >= 50);
+  }
+  if (el.dataset.input === 'defaultTarget') {
+    const v = parseInt(el.value.replace(/\D/g, ''), 10);
+    if (v >= 50 && v <= 100000) { data.settings.defaultTarget = v; save(); }
+  }
+});
+document.addEventListener('change', e => {
+  const el = e.target.closest('[data-change]');
+  if (!el) return;
+  if (el.dataset.change === 'importFile' && el.files[0]) { doImport(el.files[0]); el.value = ''; }
+});
+document.addEventListener('gesturestart', e => e.preventDefault());
+document.addEventListener('visibilitychange', syncWakeLock);
+window.addEventListener('hashchange', render);
+window.addEventListener('load', () => {
+  if (!('serviceWorker' in navigator)) return;
+  const had = !!navigator.serviceWorker.controller;
+  navigator.serviceWorker.register('./sw.js').catch(() => {});
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (had) toast('Доступно обновление', { sticky: true, btn: 'Обновить', action: 'reloadApp' });
+  });
+});
+
+loadData();
+if (!location.hash) location.replace('#home');
+render();
+</script>
+</body>
+</html>
