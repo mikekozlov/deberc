@@ -246,14 +246,25 @@ button { font:inherit; color:inherit; background:none; border:none; cursor:point
 <div id="modal-root"></div>
 <div id="toast"></div>
 <script>
-const APP_VERSION = '1.0.0';
+const APP_VERSION = '1.1.0';
 const KEY = 'deberc.data';
-const CUR_SCHEMA = 1;
+const CUR_SCHEMA = 2;
+const SYNC = { gistId: '087030f5e0d027812503e0824e533a23', file: 'deberc-data.json' };
 const DEAL_TOTAL = 162;
 const DECL_PTS = { terz: 20, fifty: 50, bella: 20 };
 const SUITS = { s: '♠', c: '♣', h: '♥', d: '♦' };
 const SUIT_CLS = { s: 'suit-black', c: 'suit-black', h: 'suit-red', d: 'suit-red' };
-const MIGRATIONS = {};
+const MIGRATIONS = {
+  1: d => {
+    d.schemaVersion = 2;
+    d.updatedAt = (d.players.length || d.games.length) ? nowIso() : '1970-01-01T00:00:00.000Z';
+    if (d.settings.lastBackupAt) { try { localStorage.setItem('deberc.backupAt', d.settings.lastBackupAt); } catch {} }
+    if (d.settings.hintDismissed) { try { localStorage.setItem('deberc.hint', '1'); } catch {} }
+    delete d.settings.lastBackupAt;
+    delete d.settings.hintDismissed;
+    return d;
+  }
+};
 const IS_IOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 const STANDALONE = navigator.standalone === true || matchMedia('(display-mode: standalone)').matches;
 let data = null;
@@ -270,7 +281,7 @@ const uid = p => p + '_' + Math.random().toString(36).slice(2, 8) + Date.now().t
 const nowIso = () => new Date().toISOString();
 
 function defaults() {
-  return { schemaVersion: CUR_SCHEMA, settings: { defaultTarget: 1010, lastBackupAt: null, hintDismissed: false }, players: [], games: [] };
+  return { schemaVersion: CUR_SCHEMA, updatedAt: '1970-01-01T00:00:00.000Z', settings: { defaultTarget: 1010 }, players: [], games: [] };
 }
 function migrate(d) {
   while (d.schemaVersion < CUR_SCHEMA) d = MIGRATIONS[d.schemaVersion](d);
@@ -296,10 +307,101 @@ function loadData() {
     setTimeout(() => uiAlert('Данные повреждены', 'Не удалось прочитать сохранённые данные. Они отложены в резервный слот, приложение начато с чистого листа. Если есть бэкап — импортируйте его в Настройках.'), 100);
   }
 }
-function save() {
+function save(stamp = true) {
   if (storeLocked) return;
+  if (stamp) data.updatedAt = nowIso();
   try { localStorage.setItem(KEY, JSON.stringify(data)); }
   catch { uiAlert('Ошибка сохранения', 'Не удалось сохранить данные. Срочно сделайте экспорт в Настройках.'); }
+  if (stamp) schedulePush();
+}
+
+const getToken = () => { try { return localStorage.getItem('deberc.token') || ''; } catch { return ''; } };
+const setToken = t => { try { t ? localStorage.setItem('deberc.token', t) : localStorage.removeItem('deberc.token'); } catch {} };
+const syncState = { pushedAt: null, pulledAt: null, error: null, busy: false };
+let pushTimer = null;
+let lastPullTry = 0;
+function schedulePush() {
+  if (!getToken()) return;
+  clearTimeout(pushTimer);
+  pushTimer = setTimeout(pushCloud, 4000);
+}
+function ghHeaders(withAuth) {
+  const h = { 'Accept': 'application/vnd.github+json' };
+  const t = getToken();
+  if (withAuth && t) h['Authorization'] = 'Bearer ' + t;
+  return h;
+}
+async function fetchCloudData() {
+  const res = await fetch('https://api.github.com/gists/' + SYNC.gistId, { headers: ghHeaders(false), cache: 'no-store' });
+  if (!res.ok) throw new Error('HTTP ' + res.status);
+  const g = await res.json();
+  const f = g.files && g.files[SYNC.file];
+  if (!f) throw new Error('в gist нет файла данных');
+  const text = f.truncated ? await (await fetch(f.raw_url, { cache: 'no-store' })).text() : f.content;
+  let d = JSON.parse(text);
+  if (typeof d.schemaVersion !== 'number' || !Array.isArray(d.players) || !Array.isArray(d.games)) throw new Error('неверный формат данных');
+  if (d.schemaVersion > CUR_SCHEMA) throw new Error('облачные данные новее приложения — обновите приложение');
+  return migrate(d);
+}
+function applyCloud(d) {
+  data = d;
+  save(false);
+  render();
+}
+async function pullCloud(force = false, auto = false) {
+  if (syncState.busy) return false;
+  if (auto && Date.now() - lastPullTry < 20000) return false;
+  lastPullTry = Date.now();
+  syncState.busy = true;
+  try {
+    const d = await fetchCloudData();
+    syncState.pulledAt = nowIso();
+    syncState.error = null;
+    if (force || (d.updatedAt || '') > (data.updatedAt || '')) {
+      applyCloud(d);
+      toast('Данные обновлены из облака');
+      return true;
+    }
+    if (getToken() && (data.updatedAt || '') > (d.updatedAt || '')) schedulePush();
+    return false;
+  } catch (e) {
+    syncState.error = String(e.message || e);
+    return false;
+  } finally {
+    syncState.busy = false;
+    if (route() === 'settings') render();
+  }
+}
+async function pushCloud() {
+  const t = getToken();
+  if (!t || storeLocked) return false;
+  if (syncState.busy) { schedulePush(); return false; }
+  syncState.busy = true;
+  try {
+    let cloud = null;
+    try { cloud = await fetchCloudData(); } catch {}
+    if (cloud && (cloud.updatedAt || '') > (data.updatedAt || '')) {
+      applyCloud(cloud);
+      toast('В облаке данные новее — обновлено из облака');
+      return false;
+    }
+    const res = await fetch('https://api.github.com/gists/' + SYNC.gistId, {
+      method: 'PATCH',
+      headers: { ...ghHeaders(true), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ files: { [SYNC.file]: { content: JSON.stringify(data, null, 2) } } })
+    });
+    if (!res.ok) throw new Error(res.status === 401 || res.status === 403 ? 'токен не подходит (нужно право Gists: Read and write)' : res.status === 404 ? 'нет доступа к gist (токен другого аккаунта?)' : 'HTTP ' + res.status);
+    syncState.pushedAt = nowIso();
+    syncState.error = null;
+    return true;
+  } catch (e) {
+    syncState.error = String(e.message || e);
+    toast('Не удалось отправить в облако');
+    return false;
+  } finally {
+    syncState.busy = false;
+    if (route() === 'settings') render();
+  }
 }
 
 function declPoints(d) {
@@ -442,10 +544,12 @@ function header(title, back, extra) {
 function installHintHtml() {
   return `<div class="card notice"><div>📲 Установите приложение: <b>Поделиться → На экран «Домой»</b>.<br>Данные хранятся внутри установленного приложения — вносите результаты после установки.</div><button class="nx" data-action="hintDismiss">✕</button></div>`;
 }
+const getBackupAt = () => { try { return localStorage.getItem('deberc.backupAt'); } catch { return null; } };
 function backupNagHtml() {
+  if (getToken()) return '';
   const fin = finishedGames();
   if (!fin.length) return '';
-  const last = data.settings.lastBackupAt;
+  const last = getBackupAt();
   const since = fin.filter(g => !last || g.finishedAt > last).length;
   if ((last && since < 5) || (!last && fin.length < 3)) return '';
   return `<button class="card notice" style="width:100%;text-align:left" data-action="nav" data-to="settings"><div>💾 ${last ? 'С последнего бэкапа сыграно игр: ' + since : 'Бэкап ещё ни разу не делался'}. Экспортируйте данные в Настройках.</div></button>`;
@@ -462,7 +566,7 @@ function renderHome() {
   }
   return `<div class="hdr center"><div class="brand">Дебертц</div></div>
   <div class="content">
-    ${IS_IOS && !STANDALONE && !data.settings.hintDismissed ? installHintHtml() : ''}
+    ${IS_IOS && !STANDALONE && !localStorage.getItem('deberc.hint') ? installHintHtml() : ''}
     ${backupNagHtml()}
     ${cont}
     <button class="bigbtn primary" data-action="goNew">Новая игра</button>
@@ -692,12 +796,35 @@ function renderSettings() {
     <button class="btn small ghost" data-action="renamePlayer" data-pid="${p.id}">✎</button>
     <button class="btn small ghost" data-action="toggleArchive" data-pid="${p.id}">${p.archived ? 'Вернуть' : 'Скрыть'}</button>
   </div>`).join('');
-  const lb = data.settings.lastBackupAt;
+  const lb = getBackupAt();
+  const t = getToken();
+  let syncStatus;
+  if (syncState.busy) syncStatus = 'Синхронизация…';
+  else if (syncState.error) syncStatus = `<span style="color:var(--danger)">Ошибка: ${esc(syncState.error)}</span>`;
+  else if (t) syncStatus = `Запись включена ✓${syncState.pushedAt ? ' · отправлено ' + fmtDT(syncState.pushedAt) : ''}`;
+  else syncStatus = 'Только чтение — игры с этого устройства не попадут в общее облако';
+  const syncSec = `<div class="sec"><div class="sec-title">Синхронизация</div>
+    <div class="srow"><span class="sl">${syncStatus}</span></div>
+    <div class="srow"><span class="sl">Получено из облака: ${syncState.pulledAt ? fmtDT(syncState.pulledAt) : 'ещё нет'}</span></div>
+    ${t
+      ? `<div style="display:flex;gap:10px;margin-top:12px;flex-wrap:wrap">
+          <button class="btn ghost" data-action="clearToken">Убрать токен</button>
+          <button class="btn ghost" data-action="pullNow">Обновить из облака</button>
+          <button class="btn ghost" data-action="pullForce">Заменить облачными</button>
+        </div>`
+      : `<input class="m-input" type="password" id="token-input" placeholder="GitHub-токен для записи" autocomplete="off">
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          <button class="btn primary" data-action="saveToken">Включить запись</button>
+          <button class="btn ghost" data-action="pullNow">Обновить из облака</button>
+        </div>
+        <div class="notice" style="margin-top:12px">Токен нужен только устройству, которое ведёт счёт. Создать: github.com → Settings → Developer settings → Fine-grained tokens → доступ «Gists: Read and write» → вставить сюда.</div>`}
+  </div>`;
   return header('Настройки', 'home') + `<div class="content">
     <div class="sec"><div class="sec-title">Игра</div>
       <div class="srow"><span class="sl">Цель по умолчанию</span>
       <input class="tinput" inputmode="numeric" pattern="[0-9]*" value="${data.settings.defaultTarget}" data-input="defaultTarget"></div>
     </div>
+    ${syncSec}
     <div class="sec"><div class="sec-title">Игроки</div>
       ${plist || '<div class="empty">Игроков пока нет</div>'}
       <button class="btn ghost" style="margin-top:10px;color:var(--t1)" data-action="addPlayer">+ Добавить игрока</button>
@@ -842,7 +969,7 @@ function finishGame(g, w) {
 
 const ACTIONS = {
   nav: d => nav(d.to),
-  hintDismiss: () => { data.settings.hintDismissed = true; save(); render(); },
+  hintDismiss: () => { try { localStorage.setItem('deberc.hint', '1'); } catch {} render(); },
   reloadApp: () => location.reload(),
   goNew: async () => {
     const g = activeGame();
@@ -1006,7 +1133,25 @@ const ACTIONS = {
     save();
     render();
   },
-  exportData: () => doExport()
+  exportData: () => doExport(),
+  saveToken: async () => {
+    const inp = document.getElementById('token-input');
+    const t = (inp ? inp.value : '').trim();
+    if (!t) { toast('Вставьте токен'); return; }
+    setToken(t);
+    render();
+    const ok = await pushCloud();
+    if (ok) toast('Запись в облако включена');
+  },
+  clearToken: () => { setToken(''); syncState.error = null; render(); },
+  pullNow: async () => {
+    const updated = await pullCloud();
+    if (!updated) toast(syncState.error ? 'Ошибка синхронизации' : 'Данные уже актуальны');
+  },
+  pullForce: async () => {
+    const ok = await uiConfirm('Заменить облачными', 'Данные на этом устройстве будут заменены облачными без сравнения дат.', 'Заменить', true);
+    if (ok) await pullCloud(true);
+  }
 };
 
 async function doExport() {
@@ -1027,8 +1172,7 @@ async function doExport() {
     document.body.appendChild(a); a.click(); a.remove();
     setTimeout(() => URL.revokeObjectURL(url), 5000);
   }
-  data.settings.lastBackupAt = nowIso();
-  save();
+  try { localStorage.setItem('deberc.backupAt', nowIso()); } catch {}
   render();
   toast('Бэкап сохранён');
 }
@@ -1087,6 +1231,7 @@ document.addEventListener('change', e => {
 });
 document.addEventListener('gesturestart', e => e.preventDefault());
 document.addEventListener('visibilitychange', syncWakeLock);
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') pullCloud(false, true); });
 window.addEventListener('hashchange', render);
 window.addEventListener('load', () => {
   if (!('serviceWorker' in navigator)) return;
@@ -1100,6 +1245,7 @@ window.addEventListener('load', () => {
 loadData();
 if (!location.hash) location.replace('#home');
 render();
+pullCloud(false, true);
 </script>
 </body>
 </html>
