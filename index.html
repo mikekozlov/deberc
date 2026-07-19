@@ -93,6 +93,8 @@ button { font:inherit; color:inherit; background:none; border:none; cursor:point
 .rp i { display:block; font-style:normal; font-weight:400; font-size:12px; color:var(--muted); }
 .bait-badge { display:inline-block; font-size:11px; font-weight:800; color:#fff; background:var(--danger);
   border-radius:6px; padding:1px 6px; vertical-align:2px; margin-left:5px; }
+.ski-badge { display:inline-block; font-size:11px; font-weight:800; color:#fff; background:#6b48d4;
+  border-radius:6px; padding:1px 6px; vertical-align:2px; margin-left:5px; }
 .suit-red { color:var(--red); } .suit-black { color:var(--black); }
 .fab-wrap { position:fixed; left:0; right:0; bottom:0; padding:12px 16px calc(14px + env(safe-area-inset-bottom));
   background:linear-gradient(to top, var(--bg) 60%, transparent); display:flex; justify-content:center; z-index:20; }
@@ -246,12 +248,14 @@ button { font:inherit; color:inherit; background:none; border:none; cursor:point
 <div id="modal-root"></div>
 <div id="toast"></div>
 <script>
-const APP_VERSION = '1.1.0';
+const APP_VERSION = '1.2.0';
 const KEY = 'deberc.data';
 const CUR_SCHEMA = 2;
 const SYNC = { gistId: '087030f5e0d027812503e0824e533a23', file: 'deberc-data.json' };
 const DEAL_TOTAL = 162;
 const DECL_PTS = { terz: 20, fifty: 50, bella: 20 };
+const SKI_MIN = 13;       // «лыжа»: пара, набравшая (взятки + комбинации) меньше SKI_MIN, получает штраф
+const SKI_PENALTY = 100;  // размер штрафа за лыжу
 const SUITS = { s: '♠', c: '♣', h: '♥', d: '♦' };
 const SUIT_CLS = { s: 'suit-black', c: 'suit-black', h: 'suit-red', d: 'suit-red' };
 const MIGRATIONS = {
@@ -416,15 +420,24 @@ function scoreRound(round, teams) {
   if (bait) {
     totals = [0, 0];
     totals[opp] = raw[0] + raw[1];
-  } else totals = raw;
-  return { totals, bait, takerTeam };
+  } else totals = [...raw];
+  // Лыжа: при капоте не начисляется; иначе пара с raw < SKI_MIN получает −SKI_PENALTY.
+  // Сумма raw за раздачу ≥ 162, поэтому под лыжу может попасть максимум одна пара.
+  const kapot = round.trickPoints[0] === DEAL_TOTAL || round.trickPoints[1] === DEAL_TOTAL;
+  let ski = null;
+  if (!kapot) {
+    if (raw[0] < SKI_MIN) ski = 0;
+    else if (raw[1] < SKI_MIN) ski = 1;
+    if (ski !== null) totals[ski] -= SKI_PENALTY;
+  }
+  return { totals, bait, takerTeam, ski };
 }
 function gameRows(game) {
   let cum = [0, 0];
   return game.rounds.map(r => {
     const s = scoreRound(r, game.teams);
     cum = [cum[0] + s.totals[0], cum[1] + s.totals[1]];
-    return { round: r, totals: s.totals, bait: s.bait, takerTeam: s.takerTeam, cum: [...cum] };
+    return { round: r, totals: s.totals, bait: s.bait, takerTeam: s.takerTeam, ski: s.ski, cum: [...cum] };
   });
 }
 function gameTotals(game) {
@@ -454,13 +467,17 @@ function runSelfTest() {
     ['белла у соперника заказчика', scoreRound(R('a', [100, 62], D0, { terz: 0, fifty: 0, bella: true }), teams), { totals: [100, 82], bait: false }],
     ['капот заказчика второй пары', scoreRound(R('c', [0, 162]), teams), { totals: [0, 162], bait: false }],
     ['ничья — каждый пишет своё', scoreRound(R('a', [81, 81]), teams), { totals: [81, 81], bait: false }],
-    ['байт второй пары', scoreRound(R('d', [90, 72]), teams), { totals: [162, 0], bait: true }]
+    ['байт второй пары', scoreRound(R('d', [90, 72]), teams), { totals: [162, 0], bait: true }],
+    ['лыжа соперника', scoreRound(R('a', [152, 10]), teams), { totals: [152, -90], bait: false, ski: 1 }],
+    ['лыжа заказчика при байте', scoreRound(R('a', [10, 152]), teams), { totals: [-100, 162], bait: true, ski: 0 }],
+    ['граница 13 — не лыжа', scoreRound(R('a', [149, 13]), teams), { totals: [149, 13], bait: false, ski: null }],
+    ['при капоте лыжи нет', scoreRound(R('a', [162, 0]), teams), { totals: [162, 0], bait: false, ski: null }]
   ];
   const results = cases.map(([name, got, want]) => ({
     case: name,
-    pass: eq(got.totals, want.totals) && got.bait === want.bait,
-    got: JSON.stringify(got.totals) + (got.bait ? ' БАЙТ' : ''),
-    want: JSON.stringify(want.totals) + (want.bait ? ' БАЙТ' : '')
+    pass: eq(got.totals, want.totals) && got.bait === want.bait && (got.ski ?? null) === (want.ski ?? null),
+    got: JSON.stringify(got.totals) + (got.bait ? ' БАЙТ' : '') + (got.ski != null ? ' ЛЫЖА' : ''),
+    want: JSON.stringify(want.totals) + (want.bait ? ' БАЙТ' : '') + (want.ski != null ? ' ЛЫЖА' : '')
   }));
   const w = [
     ['победа одной пары', detectWinner([1015, 900], 1010), 0],
@@ -605,12 +622,13 @@ function renderNew() {
 
 function roundRowHtml(g, row, idx, clickable) {
   const badge = row.bait ? '<span class="bait-badge">Б</span>' : '';
+  const skiB = t => row.ski === t ? '<span class="ski-badge">Л</span>' : '';
   return `<button class="round-row ${clickable ? '' : 'static'}" ${clickable ? `data-action="editRound" data-rid="${row.round.id}"` : ''}>
     <span class="rn">${idx + 1}</span>
     <span class="rsuit">${suitHtml(row.round.trumpSuit)}</span>
     <span class="rtaker rt${row.takerTeam}">${initial(row.round.trumpTakerId)}</span>
-    <span class="rp">${row.totals[0]}${row.takerTeam === 0 ? badge : ''}<i>${row.cum[0]}</i></span>
-    <span class="rp">${row.totals[1]}${row.takerTeam === 1 ? badge : ''}<i>${row.cum[1]}</i></span>
+    <span class="rp">${row.totals[0]}${row.takerTeam === 0 ? badge : ''}${skiB(0)}<i>${row.cum[0]}</i></span>
+    <span class="rp">${row.totals[1]}${row.takerTeam === 1 ? badge : ''}${skiB(1)}<i>${row.cum[1]}</i></span>
   </button>`;
 }
 function boardHtml(g, totals, winner) {
@@ -890,7 +908,7 @@ function renderSheet() {
   let preview;
   if (sheet.takerId && tp) {
     const s = scoreRound(sheetRound(tp), g.teams);
-    const badge = t => s.bait && s.takerTeam === t ? ' <span class="bait-badge">БАЙТ</span>' : '';
+    const badge = t => (s.bait && s.takerTeam === t ? ' <span class="bait-badge">БАЙТ</span>' : '') + (s.ski === t ? ' <span class="ski-badge">ЛЫЖА</span>' : '');
     preview = `<div class="preview"><div class="pv" style="color:var(--t0)">${s.totals[0]}${badge(0)}</div><div class="pv-sep">:</div><div class="pv" style="color:var(--t1)">${s.totals[1]}${badge(1)}</div></div>`;
   } else preview = '<div class="preview dim">Итог раунда появится после ввода</div>';
   const n = sheet.editId ? g.rounds.findIndex(r => r.id === sheet.editId) + 1 : g.rounds.length + 1;
