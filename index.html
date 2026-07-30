@@ -250,7 +250,7 @@ button { font:inherit; color:inherit; background:none; border:none; cursor:point
 <div id="modal-root"></div>
 <div id="toast"></div>
 <script>
-const APP_VERSION = '1.2.0';
+const APP_VERSION = '1.2.1';
 const KEY = 'deberc.data';
 const CUR_SCHEMA = 3;
 const SYNC_URL = '/api/journal/deberc';
@@ -878,10 +878,9 @@ function renderSettings() {
     <div class="srow"><span class="sl">${syncStatus}</span></div>
     <div class="srow"><span class="sl">Получено с сервера: ${syncState.pulledAt ? fmtDT(syncState.pulledAt) : 'ещё нет'}</span></div>
     <div style="display:flex;gap:10px;margin-top:12px;flex-wrap:wrap">
-      <button class="btn ghost" data-action="pullNow">Обновить с сервера</button>
       <button class="btn ghost" data-action="pullForce">Заменить серверными</button>
     </div>
-    <div class="notice" style="margin-top:12px">Данные лежат на домашнем ПК и доступны только внутри тайнета. Все устройства в тайнете читают и пишут автоматически — вход и токены не нужны. Если ПК спит, приложение работает локально и дошлёт данные позже.</div>
+    <div class="notice" style="margin-top:12px">Данные лежат на домашнем ПК и доступны только внутри тайнета. Все устройства в тайнете читают и пишут автоматически — вход, токены и ручное обновление не нужны. Если ПК спит, приложение работает локально и дошлёт данные позже. «Заменить серверными» — только на случай, когда на этом устройстве оказались неверные данные и их надо отбросить.</div>
   </div>`;
   return header('Настройки', 'home') + `<div class="content">
     <div class="sec"><div class="sec-title">Игра</div>
@@ -1206,10 +1205,6 @@ const ACTIONS = {
     render();
   },
   exportData: () => doExport(),
-  pullNow: async () => {
-    const updated = await pullCloud();
-    if (!updated) toast(syncState.error ? 'Ошибка синхронизации' : 'Данные уже актуальны');
-  },
   pullForce: async () => {
     const ok = await uiConfirm('Заменить серверными', 'Данные на этом устройстве будут заменены копией с сервера без сравнения дат.', 'Заменить', true);
     if (ok) await pullCloud(true);
@@ -1294,6 +1289,7 @@ document.addEventListener('change', e => {
 document.addEventListener('gesturestart', e => e.preventDefault());
 document.addEventListener('visibilitychange', syncWakeLock);
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') pullCloud(false, true); });
+setInterval(() => { if (!sheet && !victory && document.visibilityState === 'visible') pullCloud(false, true); }, 25000);
 window.addEventListener('hashchange', render);
 window.addEventListener('load', () => {
   if (!('serviceWorker' in navigator)) return;
