@@ -83,7 +83,6 @@ button { font:inherit; color:inherit; background:none; border:none; cursor:point
 .round-row { display:flex; align-items:center; width:100%; gap:6px; padding:11px 10px; border-radius:12px;
   background:var(--surface); border:1px solid var(--border); margin:6px 0; text-align:center; }
 .round-row:active { background:var(--surface2); }
-.round-row.static:active { background:var(--surface); }
 .rn { width:26px; color:var(--muted); font-size:14px; flex:0 0 auto; }
 .rsuit { width:30px; font-size:21px; flex:0 0 auto; }
 .rtaker { flex:0 0 24%; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
@@ -240,6 +239,11 @@ button { font:inherit; color:inherit; background:none; border:none; cursor:point
 .chip.sel { background:var(--t1-soft); border-color:var(--t1); color:var(--t1); }
 .dealer-tag { text-align:center; font-size:15px; color:var(--text2); margin:0 0 14px; }
 .dealer-tag b { color:var(--text); }
+.rd-row { display:flex; align-items:baseline; justify-content:space-between; gap:12px; padding:8px 0; border-bottom:1px solid var(--grid); }
+.rd-row:last-child { border-bottom:0; }
+.rd-k { color:var(--muted); font-size:13px; flex:0 0 auto; }
+.rd-v { color:var(--text); text-align:right; font-size:15px; }
+.rd-note { display:block; color:var(--muted); font-size:12px; }
 .chip.own0.sel { background:var(--t0-soft); border-color:var(--t0); color:var(--t0); }
 .chip.own1.sel { background:var(--t1-soft); border-color:var(--t1); color:var(--t1); }
 .bella-row { display:flex; gap:10px; }
@@ -251,7 +255,7 @@ button { font:inherit; color:inherit; background:none; border:none; cursor:point
 <div id="modal-root"></div>
 <div id="toast"></div>
 <script>
-const APP_VERSION = '1.4.0';
+const APP_VERSION = '1.5.0';
 const KEY = 'deberc.data';
 const CUR_SCHEMA = 3;
 const SYNC_URL = '/api/journal/deberc';
@@ -261,6 +265,7 @@ const LYZHA_LIMIT = 13;
 const PENALTY = -100;
 const FREE_BATONS = 2;
 const SUITS = { s: '♠', c: '♣', h: '♥', d: '♦' };
+const SUIT_NAMES = { s: 'пики', c: 'трефы', h: 'черви', d: 'бубны' };
 const SUIT_CLS = { s: 'suit-black', c: 'suit-black', h: 'suit-red', d: 'suit-red' };
 const MIGRATIONS = {
   1: d => {
@@ -682,16 +687,47 @@ function renderNew() {
   </div>`;
 }
 
-function roundRowHtml(g, row, idx, clickable) {
+function roundRowHtml(g, row, idx) {
   const mark = t => (row.baton === t ? `<span class="bait-badge" title="Батон №${row.batonNo}${row.batonNo > FREE_BATONS ? ' — штраф −100' : ''}">Б${row.batonNo}</span>` : '')
     + (row.lyzha === t ? '<span class="bait-badge" title="Лыжа">Л</span>' : '');
-  return `<button class="round-row ${clickable ? '' : 'static'}" ${clickable ? `data-action="editRound" data-rid="${row.round.id}"` : ''}>
+  return `<button class="round-row" data-action="roundInfo" data-rid="${row.round.id}" data-gid="${g.id}">
     <span class="rn">${idx + 1}</span>
     <span class="rsuit">${suitHtml(row.round.trumpSuit)}</span>
     <span class="rtaker rt${row.takerTeam}">${esc(playerName(row.round.trumpTakerId))}</span>
     <span class="rp">${row.totals[0]}${mark(0)}<i>${row.cum[0]}</i></span>
     <span class="rp">${row.totals[1]}${mark(1)}<i>${row.cum[1]}</i></span>
   </button>`;
+}
+function declSummary(d) {
+  const parts = [];
+  if (d.terz) parts.push('терц' + (d.terz > 1 ? ' ×' + d.terz : ''));
+  if (d.fifty) parts.push('полтинник' + (d.fifty > 1 ? ' ×' + d.fifty : ''));
+  if (d.deberc) parts.push('деберц' + (d.deberc > 1 ? ' ×' + d.deberc : ''));
+  return parts.join(' · ');
+}
+function roundDetailsHtml(g, rows, idx) {
+  const row = rows[idx];
+  const r = row.round;
+  const noTricks = t => r.trickPoints[t] === 0;
+  const note = t => noTricks(t) ? '<span class="rd-note">не зачтено — пара без взяток</span>' : '';
+  const rd = (k, v) => `<div class="rd-row"><span class="rd-k">${k}</span><span class="rd-v">${v}</span></div>`;
+  const pair = t => `<span style="color:var(--t${t})">${esc(teamNames(g, t))}</span>`;
+  const two = (a, b) => `<b style="color:var(--t0)">${a}</b> : <b style="color:var(--t1)">${b}</b>`;
+  const owner = seqPoints(r.declarations[0]) ? 0 : seqPoints(r.declarations[1]) ? 1 : null;
+  const combos = owner === null ? '—'
+    : `${pair(owner)}<br>${declSummary(r.declarations[owner])} · ${seqPoints(r.declarations[owner])}${note(owner)}`;
+  const bt = r.declarations[0].bella ? 0 : r.declarations[1].bella ? 1 : null;
+  const bella = bt === null ? '—' : `${pair(bt)} · 20${note(bt)}`;
+  const dealer = dealerForRound(g, idx);
+  const mark = t => (row.baton === t ? ` <span class="bait-badge">БАТОН №${row.batonNo}${row.batonNo > FREE_BATONS ? ' · −100' : ''}</span>` : '')
+    + (row.lyzha === t ? ' <span class="bait-badge">ЛЫЖА</span>' : '');
+  return rd('Раздавал', dealer ? esc(playerName(dealer)) : '—')
+    + rd('Заказал', `<span style="color:var(--t${row.takerTeam})">${esc(playerName(r.trumpTakerId))}</span> · ${suitHtml(r.trumpSuit)} ${SUIT_NAMES[r.trumpSuit]}`)
+    + rd('Очки за взятки', two(r.trickPoints[0], r.trickPoints[1]))
+    + rd('Комбинации', combos)
+    + rd('Белла', bella)
+    + rd('Итог раунда', `<b style="color:var(--t0)">${row.totals[0]}</b>${mark(0)} : <b style="color:var(--t1)">${row.totals[1]}</b>${mark(1)}`)
+    + rd('Счёт после раунда', two(row.cum[0], row.cum[1]));
 }
 function boardHtml(g, totals, winner) {
   const pct = t => Math.max(0, Math.min(100, Math.round(totals[t] / g.target * 100)));
@@ -706,13 +742,13 @@ function renderGame() {
   const g = activeGame();
   const rows = gameRows(g);
   const totals = rows.length ? rows[rows.length - 1].cum : [0, 0];
-  const list = rows.map((r, i) => roundRowHtml(g, r, i, true)).reverse().join('');
+  const list = rows.map((r, i) => roundRowHtml(g, r, i)).reverse().join('');
   const dealer = dealerForRound(g, g.rounds.length);
   return header('До ' + g.target, 'home', '<button class="hbtn" data-action="gameMenu">⋯</button>') + `
   <div class="content pad-fab">
     ${boardHtml(g, totals, null)}
     ${dealer ? `<div class="dealer-tag">🃏 Раздаёт: <b>${esc(playerName(dealer))}</b></div>` : ''}
-    ${rows.length ? `<div class="sec-title">Раунды — нажмите, чтобы исправить</div>${list}` : '<div class="empty">Раундов пока нет.<br>Раздавайте карты и жмите «+ Раунд»</div>'}
+    ${rows.length ? `<div class="sec-title">Раунды — нажмите для деталей</div>${list}` : '<div class="empty">Раундов пока нет.<br>Раздавайте карты и жмите «+ Раунд»</div>'}
   </div>
   <div class="fab-wrap"><button class="fab" data-action="openSheet">+ Раунд</button></div>`;
 }
@@ -795,7 +831,7 @@ function renderGameView(id) {
   return header(fmtDT(g.finishedAt || g.createdAt), 'history') + `<div class="content">
     ${boardHtml(g, totals, g.winnerTeam)}
     ${chartSvg(g, rows)}
-    <div class="sec"><div class="sec-title">Раунды</div>${rows.map((r, i) => roundRowHtml(g, r, i, false)).join('')}</div>
+    <div class="sec"><div class="sec-title">Раунды — нажмите для деталей</div>${rows.map((r, i) => roundRowHtml(g, r, i)).join('')}</div>
   </div>`;
 }
 
@@ -1103,6 +1139,16 @@ const ACTIONS = {
   openSheet: () => {
     sheet = { editId: null, takerId: null, suit: null, decl: [emptyDecl(), emptyDecl()], declOwner: null, side: 0, tricksStr: '', kapot: null };
     renderOverlays();
+  },
+  roundInfo: async d => {
+    const g = data.games.find(x => x.id === d.gid);
+    if (!g) return;
+    const idx = g.rounds.findIndex(r => r.id === d.rid);
+    if (idx < 0) return;
+    const buttons = [{ key: 'close', label: 'Закрыть', cls: 'ghost' }];
+    if (g.status === 'active') buttons.push({ key: 'edit', label: 'Исправить', cls: 'primary' });
+    const res = await modal({ title: 'Раунд ' + (idx + 1), body: roundDetailsHtml(g, gameRows(g), idx), buttons });
+    if (res.key === 'edit') ACTIONS.editRound({ rid: d.rid });
   },
   editRound: d => {
     const g = activeGame();
