@@ -86,9 +86,9 @@ button { font:inherit; color:inherit; background:none; border:none; cursor:point
 .round-row.static:active { background:var(--surface); }
 .rn { width:26px; color:var(--muted); font-size:14px; flex:0 0 auto; }
 .rsuit { width:30px; font-size:21px; flex:0 0 auto; }
-.rtaker { flex:0 0 auto; width:34px; height:34px; border-radius:50%; display:flex; align-items:center; justify-content:center;
-  font-size:15px; font-weight:700; background:var(--t0-soft); color:var(--t0); }
-.rtaker.rt1 { background:var(--t1-soft); color:var(--t1); }
+.rtaker { flex:0 0 24%; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  text-align:left; font-size:14px; font-weight:700; color:var(--t0); }
+.rtaker.rt1 { color:var(--t1); }
 .rp { flex:1; font-size:19px; font-weight:700; font-variant-numeric:tabular-nums; }
 .rp i { display:block; font-style:normal; font-weight:400; font-size:12px; color:var(--muted); }
 .bait-badge { display:inline-block; font-size:11px; font-weight:800; color:#fff; background:var(--danger);
@@ -242,6 +242,7 @@ button { font:inherit; color:inherit; background:none; border:none; cursor:point
 .dealer-tag { text-align:center; font-size:15px; color:var(--text2); margin:0 0 14px; }
 .dealer-tag b { color:var(--text); }
 .bait-badge.baton { background:var(--good); }
+.bait-badge.pen { background:#7c5cf0; }
 </style>
 </head>
 <body>
@@ -250,14 +251,14 @@ button { font:inherit; color:inherit; background:none; border:none; cursor:point
 <div id="modal-root"></div>
 <div id="toast"></div>
 <script>
-const APP_VERSION = '1.2.1';
+const APP_VERSION = '1.3.0';
 const KEY = 'deberc.data';
 const CUR_SCHEMA = 3;
 const SYNC_URL = '/api/journal/deberc';
 const DEAL_TOTAL = 162;
 const DECL_PTS = { terz: 20, fifty: 50, bella: 20, deberc: 100 };
-const LIJA_LIMIT = 13;
-const LIJA_PENALTY = -100;
+const LYZHA_LIMIT = 13;
+const PENALTY = -100;
 const FREE_BATONS = 2;
 const SUITS = { s: '♠', c: '♣', h: '♥', d: '♦' };
 const SUIT_CLS = { s: 'suit-black', c: 'suit-black', h: 'suit-red', d: 'suit-red' };
@@ -417,16 +418,16 @@ function scoreRound(round, teams, batons = [0, 0]) {
     const penalty = batons[v] >= FREE_BATONS;
     const totals = [];
     totals[bt] = DEAL_TOTAL + decl[bt];
-    totals[v] = penalty ? LIJA_PENALTY : 0;
-    return { totals, bait: false, takerTeam, baton: bt, lija: penalty ? v : null };
+    totals[v] = penalty ? PENALTY : 0;
+    return { totals, bait: false, takerTeam, baton: bt, lyzha: null, batonPenalty: penalty ? v : null };
   }
   const raw = [0, 1].map(i => round.trickPoints[i] + decl[i]);
-  const lv = raw[0] < LIJA_LIMIT ? 0 : raw[1] < LIJA_LIMIT ? 1 : null;
+  const lv = raw[0] < LYZHA_LIMIT ? 0 : raw[1] < LYZHA_LIMIT ? 1 : null;
   if (lv !== null) {
     const totals = [];
-    totals[lv] = LIJA_PENALTY;
+    totals[lv] = PENALTY;
     totals[1 - lv] = raw[1 - lv];
-    return { totals, bait: false, takerTeam, baton: null, lija: lv };
+    return { totals, bait: false, takerTeam, baton: null, lyzha: lv, batonPenalty: null };
   }
   const opp = 1 - takerTeam;
   const bait = raw[takerTeam] < raw[opp];
@@ -435,10 +436,10 @@ function scoreRound(round, teams, batons = [0, 0]) {
     totals = [0, 0];
     totals[opp] = raw[0] + raw[1];
   } else totals = raw;
-  return { totals, bait, takerTeam, baton: null, lija: null };
+  return { totals, bait, takerTeam, baton: null, lyzha: null, batonPenalty: null };
 }
 function callFailed(s) {
-  return s.bait || s.lija === s.takerTeam || (s.baton !== null && s.baton !== s.takerTeam);
+  return s.bait || s.lyzha === s.takerTeam || (s.baton !== null && s.baton !== s.takerTeam);
 }
 function gameRows(game) {
   let cum = [0, 0];
@@ -497,21 +498,22 @@ function runSelfTest() {
     ['ничья — каждый пишет своё', scoreRound(R('a', [81, 81]), teams), { totals: [81, 81], bait: false }],
     ['байт второй пары', scoreRound(R('d', [90, 72]), teams), { totals: [162, 0], bait: true }],
     ['деберц = 100', scoreRound(R('a', [100, 62], D({ deberc: 1 })), teams), { totals: [200, 62], bait: false }],
-    ['лижа перекрывает байт', scoreRound(R('a', [6, 156]), teams), { totals: [-100, 156], bait: false, lija: 0 }],
-    ['лижа не заказывавшей пары', scoreRound(R('a', [156, 6]), teams), { totals: [156, -100], bait: false, lija: 1 }],
-    ['терц спасает от лижи (но байт)', scoreRound(R('a', [6, 156], D({ terz: 1 })), teams), { totals: [0, 182], bait: true }],
-    ['порог лижи: 12 — лижа', scoreRound(R('a', [12, 150]), teams), { totals: [-100, 150], bait: false, lija: 0 }],
-    ['порог лижи: 13 — уже байт', scoreRound(R('a', [13, 149]), teams), { totals: [0, 162], bait: true }],
-    ['батон 1-й: жертве 0', scoreRound(R('a', [162, 0]), teams), { totals: [162, 0], bait: false, baton: 0 }],
+    ['лыжа перекрывает байт', scoreRound(R('a', [6, 156]), teams), { totals: [-100, 156], bait: false, lyzha: 0 }],
+    ['лыжа не заказывавшей пары', scoreRound(R('a', [156, 6]), teams), { totals: [156, -100], bait: false, lyzha: 1 }],
+    ['терц спасает от лыжи (но байт)', scoreRound(R('a', [6, 156], D({ terz: 1 })), teams), { totals: [0, 182], bait: true }],
+    ['порог лыжи: 12 — лыжа', scoreRound(R('a', [12, 150]), teams), { totals: [-100, 150], bait: false, lyzha: 0 }],
+    ['порог лыжи: 13 — уже байт', scoreRound(R('a', [13, 149]), teams), { totals: [0, 162], bait: true }],
+    ['батон 1-й: жертве 0', scoreRound(R('a', [162, 0]), teams), { totals: [162, 0], bait: false, baton: 0, batonPenalty: null }],
     ['батон с терцем победителя', scoreRound(R('c', [0, 162], D0, D({ terz: 1 })), teams, [0, 0]), { totals: [0, 182], bait: false, baton: 1 }],
-    ['батон 3-й: жертве −100', scoreRound(R('a', [162, 0]), teams, [0, 2]), { totals: [162, -100], bait: false, baton: 0, lija: 1 }]
+    ['батон 3-й: жертве −100, не лыжа', scoreRound(R('a', [162, 0]), teams, [0, 2]), { totals: [162, -100], bait: false, baton: 0, lyzha: null, batonPenalty: 1 }]
   ];
   const results = cases.map(([name, got, want]) => ({
     case: name,
     pass: eq(got.totals, want.totals) && got.bait === want.bait
-      && (want.lija === undefined || got.lija === want.lija)
-      && (want.baton === undefined || got.baton === want.baton),
-    got: JSON.stringify(got.totals) + (got.bait ? ' БАЙТ' : '') + (got.lija !== null && got.lija !== undefined ? ' ЛИЖА' + got.lija : '') + (got.baton !== null && got.baton !== undefined ? ' БАТОН' + got.baton : ''),
+      && (want.lyzha === undefined || got.lyzha === want.lyzha)
+      && (want.baton === undefined || got.baton === want.baton)
+      && (want.batonPenalty === undefined || got.batonPenalty === want.batonPenalty),
+    got: JSON.stringify(got.totals) + (got.bait ? ' БАЙТ' : '') + (got.lyzha !== null ? ' ЛЫЖА' + got.lyzha : '') + (got.baton !== null ? ' БАТОН' + got.baton : '') + (got.batonPenalty !== null ? ' ШТРАФ' + got.batonPenalty : ''),
     want: JSON.stringify(want.totals) + (want.bait ? ' БАЙТ' : '')
   }));
   const gd = { teams, firstDealerId: 'c', rounds: [] };
@@ -670,11 +672,14 @@ function renderNew() {
 }
 
 function roundRowHtml(g, row, idx, clickable) {
-  const mark = t => (row.bait && row.takerTeam === t ? '<span class="bait-badge">Б</span>' : '') + (row.lija === t ? '<span class="bait-badge">Л</span>' : '');
+  const mark = t => (row.bait && row.takerTeam === t ? '<span class="bait-badge" title="Байт">Б</span>' : '')
+    + (row.lyzha === t ? '<span class="bait-badge" title="Лыжа">Л</span>' : '')
+    + (row.batonPenalty === t ? '<span class="bait-badge pen" title="Штраф за третий батон">×3</span>' : '')
+    + (row.baton === t ? '<span class="bait-badge baton" title="Батон — все взятки">БТ</span>' : '');
   return `<button class="round-row ${clickable ? '' : 'static'}" ${clickable ? `data-action="editRound" data-rid="${row.round.id}"` : ''}>
     <span class="rn">${idx + 1}</span>
     <span class="rsuit">${suitHtml(row.round.trumpSuit)}</span>
-    <span class="rtaker rt${row.takerTeam}">${initial(row.round.trumpTakerId)}</span>
+    <span class="rtaker rt${row.takerTeam}">${esc(playerName(row.round.trumpTakerId))}</span>
     <span class="rp">${row.totals[0]}${mark(0)}<i>${row.cum[0]}</i></span>
     <span class="rp">${row.totals[1]}${mark(1)}<i>${row.cum[1]}</i></span>
   </button>`;
@@ -956,7 +961,8 @@ function renderSheet() {
   if (sheet.takerId && tp) {
     const s = scoreRound(sheetRound(tp), g.teams, batonsBefore(g, sheet.editId));
     const badge = t => (s.bait && s.takerTeam === t ? ' <span class="bait-badge">БАЙТ</span>' : '')
-      + (s.lija === t ? ' <span class="bait-badge">ЛИЖА</span>' : '')
+      + (s.lyzha === t ? ' <span class="bait-badge">ЛЫЖА</span>' : '')
+      + (s.batonPenalty === t ? ' <span class="bait-badge pen">3-Й БАТОН</span>' : '')
       + (s.baton === t ? ' <span class="bait-badge baton">БАТОН</span>' : '');
     preview = `<div class="preview"><div class="pv" style="color:var(--t0)">${s.totals[0]}${badge(0)}</div><div class="pv-sep">:</div><div class="pv" style="color:var(--t1)">${s.totals[1]}${badge(1)}</div></div>`;
   } else preview = '<div class="preview dim">Итог раунда появится после ввода</div>';
