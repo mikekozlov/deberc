@@ -238,6 +238,10 @@ button { font:inherit; color:inherit; background:none; border:none; cursor:point
 .mu-names span { flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--text2); }
 .mu-names span:last-child { text-align:right; }
 .mu-sub { font-size:13px; color:var(--muted); margin-top:4px; text-align:center; }
+.chip.sel { background:var(--t1-soft); border-color:var(--t1); color:var(--t1); }
+.dealer-tag { text-align:center; font-size:15px; color:var(--text2); margin:0 0 14px; }
+.dealer-tag b { color:var(--text); }
+.bait-badge.baton { background:var(--good); }
 </style>
 </head>
 <body>
@@ -246,12 +250,15 @@ button { font:inherit; color:inherit; background:none; border:none; cursor:point
 <div id="modal-root"></div>
 <div id="toast"></div>
 <script>
-const APP_VERSION = '1.1.0';
+const APP_VERSION = '1.2.0';
 const KEY = 'deberc.data';
-const CUR_SCHEMA = 2;
-const SYNC = { gistId: '087030f5e0d027812503e0824e533a23', file: 'deberc-data.json' };
+const CUR_SCHEMA = 3;
+const SYNC_URL = '/api/journal/deberc';
 const DEAL_TOTAL = 162;
-const DECL_PTS = { terz: 20, fifty: 50, bella: 20 };
+const DECL_PTS = { terz: 20, fifty: 50, bella: 20, deberc: 100 };
+const LIJA_LIMIT = 12;
+const LIJA_PENALTY = -100;
+const FREE_BATONS = 2;
 const SUITS = { s: '♠', c: '♣', h: '♥', d: '♦' };
 const SUIT_CLS = { s: 'suit-black', c: 'suit-black', h: 'suit-red', d: 'suit-red' };
 const MIGRATIONS = {
@@ -262,6 +269,14 @@ const MIGRATIONS = {
     if (d.settings.hintDismissed) { try { localStorage.setItem('deberc.hint', '1'); } catch {} }
     delete d.settings.lastBackupAt;
     delete d.settings.hintDismissed;
+    return d;
+  },
+  2: d => {
+    d.schemaVersion = 3;
+    d.games.forEach(g => {
+      g.firstDealerId ??= null;
+      g.rounds.forEach(r => r.declarations.forEach(x => { x.deberc ??= 0; }));
+    });
     return d;
   }
 };
@@ -315,33 +330,22 @@ function save(stamp = true) {
   if (stamp) schedulePush();
 }
 
-const getToken = () => { try { return localStorage.getItem('deberc.token') || ''; } catch { return ''; } };
-const setToken = t => { try { t ? localStorage.setItem('deberc.token', t) : localStorage.removeItem('deberc.token'); } catch {} };
 const syncState = { pushedAt: null, pulledAt: null, error: null, busy: false };
 let pushTimer = null;
 let lastPullTry = 0;
 function schedulePush() {
-  if (!getToken()) return;
   clearTimeout(pushTimer);
   pushTimer = setTimeout(pushCloud, 4000);
 }
-function ghHeaders(withAuth) {
-  const h = { 'Accept': 'application/vnd.github+json' };
-  const t = getToken();
-  if (withAuth && t) h['Authorization'] = 'Bearer ' + t;
-  return h;
+function parseCloud(d) {
+  if (!d || typeof d.schemaVersion !== 'number' || !Array.isArray(d.players) || !Array.isArray(d.games)) return null;
+  if (d.schemaVersion > CUR_SCHEMA) throw new Error('данные на сервере новее приложения — обновите приложение');
+  return migrate(d);
 }
 async function fetchCloudData() {
-  const res = await fetch('https://api.github.com/gists/' + SYNC.gistId, { headers: ghHeaders(false), cache: 'no-store' });
+  const res = await fetch(SYNC_URL, { cache: 'no-store' });
   if (!res.ok) throw new Error('HTTP ' + res.status);
-  const g = await res.json();
-  const f = g.files && g.files[SYNC.file];
-  if (!f) throw new Error('в gist нет файла данных');
-  const text = f.truncated ? await (await fetch(f.raw_url, { cache: 'no-store' })).text() : f.content;
-  let d = JSON.parse(text);
-  if (typeof d.schemaVersion !== 'number' || !Array.isArray(d.players) || !Array.isArray(d.games)) throw new Error('неверный формат данных');
-  if (d.schemaVersion > CUR_SCHEMA) throw new Error('облачные данные новее приложения — обновите приложение');
-  return migrate(d);
+  return parseCloud(await res.json());
 }
 function applyCloud(d) {
   data = d;
@@ -357,12 +361,12 @@ async function pullCloud(force = false, auto = false) {
     const d = await fetchCloudData();
     syncState.pulledAt = nowIso();
     syncState.error = null;
-    if (force || (d.updatedAt || '') > (data.updatedAt || '')) {
+    if (d && (force || (d.updatedAt || '') > (data.updatedAt || ''))) {
       applyCloud(d);
-      toast('Данные обновлены из облака');
+      toast('Данные обновлены с сервера');
       return true;
     }
-    if (getToken() && (data.updatedAt || '') > (d.updatedAt || '')) schedulePush();
+    if ((data.updatedAt || '') > ((d && d.updatedAt) || '')) schedulePush();
     return false;
   } catch (e) {
     syncState.error = String(e.message || e);
@@ -373,30 +377,27 @@ async function pullCloud(force = false, auto = false) {
   }
 }
 async function pushCloud() {
-  const t = getToken();
-  if (!t || storeLocked) return false;
+  if (storeLocked) return false;
   if (syncState.busy) { schedulePush(); return false; }
   syncState.busy = true;
   try {
-    let cloud = null;
-    try { cloud = await fetchCloudData(); } catch {}
-    if (cloud && (cloud.updatedAt || '') > (data.updatedAt || '')) {
-      applyCloud(cloud);
-      toast('В облаке данные новее — обновлено из облака');
+    const res = await fetch(SYNC_URL, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+    if (res.status === 409) {
+      const d = parseCloud(await res.json());
+      if (d) { applyCloud(d); toast('На сервере данные новее — обновлено'); }
       return false;
     }
-    const res = await fetch('https://api.github.com/gists/' + SYNC.gistId, {
-      method: 'PATCH',
-      headers: { ...ghHeaders(true), 'Content-Type': 'application/json' },
-      body: JSON.stringify({ files: { [SYNC.file]: { content: JSON.stringify(data, null, 2) } } })
-    });
-    if (!res.ok) throw new Error(res.status === 401 || res.status === 403 ? 'токен не подходит (нужно право Gists: Read and write)' : res.status === 404 ? 'нет доступа к gist (токен другого аккаунта?)' : 'HTTP ' + res.status);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
     syncState.pushedAt = nowIso();
     syncState.error = null;
     return true;
   } catch (e) {
     syncState.error = String(e.message || e);
-    toast('Не удалось отправить в облако');
+    toast('Не удалось отправить на сервер');
     return false;
   } finally {
     syncState.busy = false;
@@ -405,11 +406,28 @@ async function pushCloud() {
 }
 
 function declPoints(d) {
-  return (d.terz || 0) * DECL_PTS.terz + (d.fifty || 0) * DECL_PTS.fifty + (d.bella ? DECL_PTS.bella : 0);
+  return (d.terz || 0) * DECL_PTS.terz + (d.fifty || 0) * DECL_PTS.fifty + (d.deberc || 0) * DECL_PTS.deberc + (d.bella ? DECL_PTS.bella : 0);
 }
-function scoreRound(round, teams) {
+function scoreRound(round, teams, batons = [0, 0]) {
   const takerTeam = teams.findIndex(t => t.includes(round.trumpTakerId));
-  const raw = [0, 1].map(i => round.trickPoints[i] + declPoints(round.declarations[i]));
+  const decl = round.declarations.map(declPoints);
+  const bt = kapotTeam(round);
+  if (bt !== null) {
+    const v = 1 - bt;
+    const penalty = batons[v] >= FREE_BATONS;
+    const totals = [];
+    totals[bt] = DEAL_TOTAL + decl[bt];
+    totals[v] = penalty ? LIJA_PENALTY : 0;
+    return { totals, bait: false, takerTeam, baton: bt, lija: penalty ? v : null };
+  }
+  const raw = [0, 1].map(i => round.trickPoints[i] + decl[i]);
+  const lv = raw[0] < LIJA_LIMIT ? 0 : raw[1] < LIJA_LIMIT ? 1 : null;
+  if (lv !== null) {
+    const totals = [];
+    totals[lv] = LIJA_PENALTY;
+    totals[1 - lv] = raw[1 - lv];
+    return { totals, bait: false, takerTeam, baton: null, lija: lv };
+  }
   const opp = 1 - takerTeam;
   const bait = raw[takerTeam] < raw[opp];
   let totals;
@@ -417,15 +435,38 @@ function scoreRound(round, teams) {
     totals = [0, 0];
     totals[opp] = raw[0] + raw[1];
   } else totals = raw;
-  return { totals, bait, takerTeam };
+  return { totals, bait, takerTeam, baton: null, lija: null };
+}
+function callFailed(s) {
+  return s.bait || s.lija === s.takerTeam || (s.baton !== null && s.baton !== s.takerTeam);
 }
 function gameRows(game) {
   let cum = [0, 0];
+  const batons = [0, 0];
   return game.rounds.map(r => {
-    const s = scoreRound(r, game.teams);
+    const s = scoreRound(r, game.teams, batons);
+    if (s.baton !== null) batons[1 - s.baton]++;
     cum = [cum[0] + s.totals[0], cum[1] + s.totals[1]];
-    return { round: r, totals: s.totals, bait: s.bait, takerTeam: s.takerTeam, cum: [...cum] };
+    return { round: r, ...s, cum: [...cum] };
   });
+}
+function batonsBefore(game, editId) {
+  const b = [0, 0];
+  for (const r of game.rounds) {
+    if (editId && r.id === editId) break;
+    const bt = kapotTeam(r);
+    if (bt !== null) b[1 - bt]++;
+  }
+  return b;
+}
+function seatingOrder(g) {
+  return [g.teams[0][0], g.teams[1][0], g.teams[0][1], g.teams[1][1]];
+}
+function dealerForRound(g, idx) {
+  if (!g.firstDealerId) return null;
+  const seats = seatingOrder(g);
+  const fi = seats.indexOf(g.firstDealerId);
+  return fi === -1 ? null : seats[(fi + idx) % 4];
 }
 function gameTotals(game) {
   const rows = gameRows(game);
@@ -443,30 +484,50 @@ function kapotTeam(round) {
 }
 function runSelfTest() {
   const teams = [['a', 'b'], ['c', 'd']];
-  const D0 = { terz: 0, fifty: 0, bella: false };
+  const D0 = { terz: 0, fifty: 0, bella: false, deberc: 0 };
+  const D = o => ({ ...D0, ...o });
   const R = (taker, tp, d0, d1) => ({ trumpTakerId: taker, trumpSuit: 'h', trickPoints: tp, declarations: [d0 || D0, d1 || D0], kapot: null });
   const eq = (a, b) => JSON.stringify(a) === JSON.stringify(b);
   const cases = [
     ['обычная раздача', scoreRound(R('a', [100, 62]), teams), { totals: [100, 62], bait: false }],
     ['байт без комбинаций', scoreRound(R('a', [60, 102]), teams), { totals: [0, 162], bait: true }],
-    ['байт с терцем заказчика', scoreRound(R('a', [60, 102], { terz: 1, fifty: 0, bella: false }), teams), { totals: [0, 182], bait: true }],
-    ['комбинации спасают от байта', scoreRound(R('a', [70, 92], { terz: 0, fifty: 1, bella: false }), teams), { totals: [120, 92], bait: false }],
-    ['белла у соперника заказчика', scoreRound(R('a', [100, 62], D0, { terz: 0, fifty: 0, bella: true }), teams), { totals: [100, 82], bait: false }],
-    ['капот заказчика второй пары', scoreRound(R('c', [0, 162]), teams), { totals: [0, 162], bait: false }],
+    ['байт с терцем заказчика', scoreRound(R('a', [60, 102], D({ terz: 1 })), teams), { totals: [0, 182], bait: true }],
+    ['комбинации спасают от байта', scoreRound(R('a', [70, 92], D({ fifty: 1 })), teams), { totals: [120, 92], bait: false }],
+    ['белла у соперника заказчика', scoreRound(R('a', [100, 62], D0, D({ bella: true })), teams), { totals: [100, 82], bait: false }],
     ['ничья — каждый пишет своё', scoreRound(R('a', [81, 81]), teams), { totals: [81, 81], bait: false }],
-    ['байт второй пары', scoreRound(R('d', [90, 72]), teams), { totals: [162, 0], bait: true }]
+    ['байт второй пары', scoreRound(R('d', [90, 72]), teams), { totals: [162, 0], bait: true }],
+    ['деберц = 100', scoreRound(R('a', [100, 62], D({ deberc: 1 })), teams), { totals: [200, 62], bait: false }],
+    ['лижа перекрывает байт', scoreRound(R('a', [6, 156]), teams), { totals: [-100, 156], bait: false, lija: 0 }],
+    ['лижа не заказывавшей пары', scoreRound(R('a', [156, 6]), teams), { totals: [156, -100], bait: false, lija: 1 }],
+    ['терц спасает от лижи (но байт)', scoreRound(R('a', [6, 156], D({ terz: 1 })), teams), { totals: [0, 182], bait: true }],
+    ['порог лижи: 11 — лижа', scoreRound(R('a', [11, 151]), teams), { totals: [-100, 151], bait: false, lija: 0 }],
+    ['порог лижи: 12 — байт', scoreRound(R('a', [12, 150]), teams), { totals: [0, 162], bait: true }],
+    ['батон 1-й: жертве 0', scoreRound(R('a', [162, 0]), teams), { totals: [162, 0], bait: false, baton: 0 }],
+    ['батон с терцем победителя', scoreRound(R('c', [0, 162], D0, D({ terz: 1 })), teams, [0, 0]), { totals: [0, 182], bait: false, baton: 1 }],
+    ['батон 3-й: жертве −100', scoreRound(R('a', [162, 0]), teams, [0, 2]), { totals: [162, -100], bait: false, baton: 0, lija: 1 }]
   ];
   const results = cases.map(([name, got, want]) => ({
     case: name,
-    pass: eq(got.totals, want.totals) && got.bait === want.bait,
-    got: JSON.stringify(got.totals) + (got.bait ? ' БАЙТ' : ''),
+    pass: eq(got.totals, want.totals) && got.bait === want.bait
+      && (want.lija === undefined || got.lija === want.lija)
+      && (want.baton === undefined || got.baton === want.baton),
+    got: JSON.stringify(got.totals) + (got.bait ? ' БАЙТ' : '') + (got.lija !== null && got.lija !== undefined ? ' ЛИЖА' + got.lija : '') + (got.baton !== null && got.baton !== undefined ? ' БАТОН' + got.baton : ''),
     want: JSON.stringify(want.totals) + (want.bait ? ' БАЙТ' : '')
   }));
+  const gd = { teams, firstDealerId: 'c', rounds: [] };
+  const dl = [
+    ['раздаёт первый (раунд 1)', dealerForRound(gd, 0), 'c'],
+    ['раздаёт по кругу (раунд 2)', dealerForRound(gd, 1), 'b'],
+    ['круг замыкается (раунд 5)', dealerForRound(gd, 4), 'c'],
+    ['без первого раздающего', dealerForRound({ teams, firstDealerId: null, rounds: [] }, 0), null]
+  ];
+  dl.forEach(([name, got, want]) => results.push({ case: name, pass: got === want, got: String(got), want: String(want) }));
   const w = [
     ['победа одной пары', detectWinner([1015, 900], 1010), 0],
     ['обе перешли — большая', detectWinner([1015, 1040], 1010), 1],
     ['обе перешли поровну', detectWinner([1020, 1020], 1010), null],
-    ['никто не дошёл', detectWinner([1000, 1009], 1010), null]
+    ['никто не дошёл', detectWinner([1000, 1009], 1010), null],
+    ['минус не мешает победе', detectWinner([-100, 1015], 1010), 1]
   ];
   w.forEach(([name, got, want]) => results.push({ case: name, pass: got === want, got: String(got), want: String(want) }));
   console.table(results);
@@ -546,7 +607,7 @@ function installHintHtml() {
 }
 const getBackupAt = () => { try { return localStorage.getItem('deberc.backupAt'); } catch { return null; } };
 function backupNagHtml() {
-  if (getToken()) return '';
+  if (syncState.pulledAt && !syncState.error) return '';
   const fin = finishedGames();
   if (!fin.length) return '';
   const last = getBackupAt();
@@ -577,7 +638,7 @@ function renderHome() {
 }
 
 function renderNew() {
-  if (!NG) NG = { slots: [null, null, null, null], target: String(data.settings.defaultTarget) };
+  if (!NG) NG = { slots: [null, null, null, null], target: String(data.settings.defaultTarget), dealer: null };
   const roster = data.players.filter(p => !p.archived && !NG.slots.includes(p.id));
   const slot = i => {
     const pid = NG.slots[i];
@@ -585,7 +646,11 @@ function renderNew() {
       ? `<button class="slot filled" data-action="clearSlot" data-i="${i}">${esc(playerName(pid))}</button>`
       : `<div class="slot">Игрок</div>`;
   };
-  const ready = NG.slots.every(Boolean) && parseInt(NG.target, 10) >= 50;
+  const seated = NG.slots.filter(Boolean);
+  const dealerSec = seated.length === 4 ? `<div class="sec"><div class="sec-title">Кто раздаёт первым</div>
+      <div class="chips">${seated.map(pid => `<button class="chip ${NG.dealer === pid ? 'sel' : ''}" data-action="pickDealer" data-pid="${pid}">${esc(playerName(pid))}</button>`).join('')}</div>
+    </div>` : '';
+  const ready = NG.slots.every(Boolean) && !!NG.dealer && parseInt(NG.target, 10) >= 50;
   return header('Новая игра', 'home') + `<div class="content">
     <div class="team-box"><div class="tb-title"><span class="dot d0"></span>Пара 1</div><div class="slots">${slot(0)}${slot(1)}</div></div>
     <div class="team-box tb1"><div class="tb-title"><span class="dot d1"></span>Пара 2</div><div class="slots">${slot(2)}${slot(3)}</div></div>
@@ -596,6 +661,7 @@ function renderNew() {
       </div>
       ${!data.players.filter(p => !p.archived).length ? '<div class="empty">Добавьте игроков, чтобы начать</div>' : ''}
     </div>
+    ${dealerSec}
     <div class="sec"><div class="sec-title">Играем до</div>
       <input class="tinput" inputmode="numeric" pattern="[0-9]*" value="${esc(NG.target)}" data-input="newTarget">
     </div>
@@ -604,17 +670,17 @@ function renderNew() {
 }
 
 function roundRowHtml(g, row, idx, clickable) {
-  const badge = row.bait ? '<span class="bait-badge">Б</span>' : '';
+  const mark = t => (row.bait && row.takerTeam === t ? '<span class="bait-badge">Б</span>' : '') + (row.lija === t ? '<span class="bait-badge">Л</span>' : '');
   return `<button class="round-row ${clickable ? '' : 'static'}" ${clickable ? `data-action="editRound" data-rid="${row.round.id}"` : ''}>
     <span class="rn">${idx + 1}</span>
     <span class="rsuit">${suitHtml(row.round.trumpSuit)}</span>
     <span class="rtaker rt${row.takerTeam}">${initial(row.round.trumpTakerId)}</span>
-    <span class="rp">${row.totals[0]}${row.takerTeam === 0 ? badge : ''}<i>${row.cum[0]}</i></span>
-    <span class="rp">${row.totals[1]}${row.takerTeam === 1 ? badge : ''}<i>${row.cum[1]}</i></span>
+    <span class="rp">${row.totals[0]}${mark(0)}<i>${row.cum[0]}</i></span>
+    <span class="rp">${row.totals[1]}${mark(1)}<i>${row.cum[1]}</i></span>
   </button>`;
 }
 function boardHtml(g, totals, winner) {
-  const pct = t => Math.min(100, Math.round(totals[t] / g.target * 100));
+  const pct = t => Math.max(0, Math.min(100, Math.round(totals[t] / g.target * 100)));
   const card = t => `<div class="team-card tc${t}">
     <div class="tc-name">${winner === t ? '<span class="tc-crown">🏆</span> ' : ''}${esc(teamNames(g, t))}</div>
     <div class="tc-score">${totals[t]}</div>
@@ -627,9 +693,11 @@ function renderGame() {
   const rows = gameRows(g);
   const totals = rows.length ? rows[rows.length - 1].cum : [0, 0];
   const list = rows.map((r, i) => roundRowHtml(g, r, i, true)).reverse().join('');
+  const dealer = dealerForRound(g, g.rounds.length);
   return header('До ' + g.target, 'home', '<button class="hbtn" data-action="gameMenu">⋯</button>') + `
   <div class="content pad-fab">
     ${boardHtml(g, totals, null)}
+    ${dealer ? `<div class="dealer-tag">🃏 Раздаёт: <b>${esc(playerName(dealer))}</b></div>` : ''}
     ${rows.length ? `<div class="sec-title">Раунды — нажмите, чтобы исправить</div>${list}` : '<div class="empty">Раундов пока нет.<br>Раздавайте карты и жмите «+ Раунд»</div>'}
   </div>
   <div class="fab-wrap"><button class="fab" data-action="openSheet">+ Раунд</button></div>`;
@@ -652,13 +720,15 @@ function tickStep(m) { for (const s of [50, 100, 200, 250, 500, 1000, 2000]) if 
 function chartSvg(g, rows) {
   const n = rows.length;
   if (!n) return '';
-  const maxY = Math.max(g.target, rows[n - 1].cum[0], rows[n - 1].cum[1]) * 1.06;
+  const allC = rows.flatMap(r => r.cum);
+  const maxY = Math.max(g.target, ...allC) * 1.06;
+  const minY = Math.min(0, ...allC);
   const X = i => CH.L + (CH.W - CH.L - CH.R) * i / n;
-  const Y = v => CH.H - CH.B - (CH.H - CH.T - CH.B) * v / maxY;
+  const Y = v => CH.H - CH.B - (CH.H - CH.T - CH.B) * (v - minY) / (maxY - minY);
   const line = t => [[0, 0]].concat(rows.map((r, i) => [i + 1, r.cum[t]])).map(p => X(p[0]).toFixed(1) + ',' + Y(p[1]).toFixed(1)).join(' ');
-  const step = tickStep(maxY);
+  const step = tickStep(maxY - minY);
   let grid = '';
-  for (let v = 0; v <= maxY; v += step) grid += `<line class="grid" x1="${CH.L}" x2="${CH.W - CH.R}" y1="${Y(v).toFixed(1)}" y2="${Y(v).toFixed(1)}"/><text class="tick" x="${CH.L - 8}" y="${(Y(v) + 4).toFixed(1)}">${v}</text>`;
+  for (let v = Math.ceil(minY / step) * step; v <= maxY; v += step) grid += `<line class="grid" x1="${CH.L}" x2="${CH.W - CH.R}" y1="${Y(v).toFixed(1)}" y2="${Y(v).toFixed(1)}"/><text class="tick" x="${CH.L - 8}" y="${(Y(v) + 4).toFixed(1)}">${v}</text>`;
   const ty = Y(g.target).toFixed(1);
   const end = t => `<circle class="pt${t}" cx="${X(n).toFixed(1)}" cy="${Y(rows[n - 1].cum[t]).toFixed(1)}" r="4.5"/>`;
   return `<div class="legend"><span class="lg0"><i></i>${esc(teamNames(g, 0))}</span><span class="lg1"><i></i>${esc(teamNames(g, 1))}</span></div>
@@ -692,7 +762,8 @@ function bindChart() {
     cross.setAttribute('x1', x); cross.setAttribute('x2', x);
     cross.style.visibility = 'visible';
     const r = rows[i - 1];
-    tip.textContent = `Раунд ${i}: +${r.totals[0]} / +${r.totals[1]} · счёт ${r.cum[0]} : ${r.cum[1]}`;
+    const dd = v => (v >= 0 ? '+' : '') + v;
+    tip.textContent = `Раунд ${i}: ${dd(r.totals[0])} / ${dd(r.totals[1])} · счёт ${r.cum[0]} : ${r.cum[1]}`;
     tip.style.left = Math.max(18, Math.min(82, x / CH.W * 100)) + '%';
     tip.style.visibility = 'visible';
   };
@@ -738,10 +809,12 @@ function computeStats() {
     const m = MU[mk] ??= { keys: keys.slice().sort(), games: 0, wins: {} };
     m.games++;
     m.wins[keys[g.winnerTeam]] = (m.wins[keys[g.winnerTeam]] || 0) + 1;
+    const batons = [0, 0];
     for (const r of g.rounds) {
-      const sc = scoreRound(r, g.teams);
+      const sc = scoreRound(r, g.teams, batons);
+      if (sc.baton !== null) batons[1 - sc.baton]++;
       const ps = P[r.trumpTakerId];
-      if (ps) { ps.calls++; if (!sc.bait) ps.callWins++; }
+      if (ps) { ps.calls++; if (!callFailed(sc)) ps.callWins++; }
       const kt = kapotTeam(r);
       if (kt !== null) for (const pid of g.teams[kt]) if (P[pid]) P[pid].kapots++;
     }
@@ -768,7 +841,7 @@ function renderStats() {
         return `<tr><td class="pname">${esc(playerName(pid))}</td><td>${s.games}</td><td>${s.wins}</td><td>${wrHtml(pct(s.wins, s.games))}</td><td>${st.cur} / ${st.best}</td><td>${s.calls ? s.calls + ' (' + pct(s.callWins, s.calls) + '%)' : '—'}</td><td>${s.kapots || '—'}</td></tr>`;
       }).join('');
     body = `<div class="stat-scroll"><table class="stat-table">
-      <thead><tr><th>Игрок</th><th>Игры</th><th>Победы</th><th>Винрейт</th><th>Серия</th><th>Заказы (успех)</th><th>Капоты</th></tr></thead>
+      <thead><tr><th>Игрок</th><th>Игры</th><th>Победы</th><th>Винрейт</th><th>Серия</th><th>Заказы (успех)</th><th>Батоны</th></tr></thead>
       <tbody>${rows}</tbody></table></div>`;
   } else if (statsTab === 'pairs') {
     const rows = Object.values(PAIR)
@@ -797,27 +870,18 @@ function renderSettings() {
     <button class="btn small ghost" data-action="toggleArchive" data-pid="${p.id}">${p.archived ? 'Вернуть' : 'Скрыть'}</button>
   </div>`).join('');
   const lb = getBackupAt();
-  const t = getToken();
   let syncStatus;
   if (syncState.busy) syncStatus = 'Синхронизация…';
   else if (syncState.error) syncStatus = `<span style="color:var(--danger)">Ошибка: ${esc(syncState.error)}</span>`;
-  else if (t) syncStatus = `Запись включена ✓${syncState.pushedAt ? ' · отправлено ' + fmtDT(syncState.pushedAt) : ''}`;
-  else syncStatus = 'Только чтение — игры с этого устройства не попадут в общее облако';
+  else syncStatus = `Синхронизация с домашним ПК ✓${syncState.pushedAt ? ' · отправлено ' + fmtDT(syncState.pushedAt) : ''}`;
   const syncSec = `<div class="sec"><div class="sec-title">Синхронизация</div>
     <div class="srow"><span class="sl">${syncStatus}</span></div>
-    <div class="srow"><span class="sl">Получено из облака: ${syncState.pulledAt ? fmtDT(syncState.pulledAt) : 'ещё нет'}</span></div>
-    ${t
-      ? `<div style="display:flex;gap:10px;margin-top:12px;flex-wrap:wrap">
-          <button class="btn ghost" data-action="clearToken">Убрать токен</button>
-          <button class="btn ghost" data-action="pullNow">Обновить из облака</button>
-          <button class="btn ghost" data-action="pullForce">Заменить облачными</button>
-        </div>`
-      : `<input class="m-input" type="password" id="token-input" placeholder="GitHub-токен для записи" autocomplete="off">
-        <div style="display:flex;gap:10px;flex-wrap:wrap">
-          <button class="btn primary" data-action="saveToken">Включить запись</button>
-          <button class="btn ghost" data-action="pullNow">Обновить из облака</button>
-        </div>
-        <div class="notice" style="margin-top:12px">Токен нужен только устройству, которое ведёт счёт. Создать: github.com → Settings → Developer settings → Fine-grained tokens → доступ «Gists: Read and write» → вставить сюда.</div>`}
+    <div class="srow"><span class="sl">Получено с сервера: ${syncState.pulledAt ? fmtDT(syncState.pulledAt) : 'ещё нет'}</span></div>
+    <div style="display:flex;gap:10px;margin-top:12px;flex-wrap:wrap">
+      <button class="btn ghost" data-action="pullNow">Обновить с сервера</button>
+      <button class="btn ghost" data-action="pullForce">Заменить серверными</button>
+    </div>
+    <div class="notice" style="margin-top:12px">Данные лежат на домашнем ПК и доступны только внутри тайнета. Все устройства в тайнете читают и пишут автоматически — вход и токены не нужны. Если ПК спит, приложение работает локально и дошлёт данные позже.</div>
   </div>`;
   return header('Настройки', 'home') + `<div class="content">
     <div class="sec"><div class="sec-title">Игра</div>
@@ -875,13 +939,15 @@ function renderSheet() {
       <button data-action="declStep" data-t="${t}" data-kind="terz" data-d="-1">−</button><b>${sheet.decl[t].terz}</b><button data-action="declStep" data-t="${t}" data-kind="terz" data-d="1">+</button></div></div>
     <div class="decl-row"><span>Полтинник</span><div class="step">
       <button data-action="declStep" data-t="${t}" data-kind="fifty" data-d="-1">−</button><b>${sheet.decl[t].fifty}</b><button data-action="declStep" data-t="${t}" data-kind="fifty" data-d="1">+</button></div></div>
+    <div class="decl-row"><span>Деберц</span><div class="step">
+      <button data-action="declStep" data-t="${t}" data-kind="deberc" data-d="-1">−</button><b>${sheet.decl[t].deberc}</b><button data-action="declStep" data-t="${t}" data-kind="deberc" data-d="1">+</button></div></div>
     <button class="bella-btn ${sheet.decl[t].bella ? 'on' : ''}" data-action="bella" data-t="${t}">Белла ${sheet.decl[t].bella ? '✓' : ''}</button>
   </div>`;
   const tp = sheetTricks();
   const trickBox = t => `<div class="trick-box tb${t} ${sheet.kapot === null && sheet.side === t ? 'active' : ''}" data-action="sheetSide" data-i="${t}">
     <div class="tb-name">${esc(teamNames(g, t))}</div>
     <div class="tb-val ${tp ? '' : 'empty'}">${tp ? tp[t] : '·'}</div>
-    <button class="kapot-btn ${sheet.kapot === t ? 'on' : ''}" data-action="kapot" data-t="${t}">Капот ${sheet.kapot === t ? '✓' : ''}</button>
+    <button class="kapot-btn ${sheet.kapot === t ? 'on' : ''}" data-action="kapot" data-t="${t}">Батон ${sheet.kapot === t ? '✓' : ''}</button>
   </div>`;
   const pad = `<div class="numpad ${sheet.kapot !== null ? 'off' : ''}">
     ${[1,2,3,4,5,6,7,8,9].map(d => `<button data-action="pad" data-d="${d}">${d}</button>`).join('')}
@@ -889,14 +955,18 @@ function renderSheet() {
   </div>`;
   let preview;
   if (sheet.takerId && tp) {
-    const s = scoreRound(sheetRound(tp), g.teams);
-    const badge = t => s.bait && s.takerTeam === t ? ' <span class="bait-badge">БАЙТ</span>' : '';
+    const s = scoreRound(sheetRound(tp), g.teams, batonsBefore(g, sheet.editId));
+    const badge = t => (s.bait && s.takerTeam === t ? ' <span class="bait-badge">БАЙТ</span>' : '')
+      + (s.lija === t ? ' <span class="bait-badge">ЛИЖА</span>' : '')
+      + (s.baton === t ? ' <span class="bait-badge baton">БАТОН</span>' : '');
     preview = `<div class="preview"><div class="pv" style="color:var(--t0)">${s.totals[0]}${badge(0)}</div><div class="pv-sep">:</div><div class="pv" style="color:var(--t1)">${s.totals[1]}${badge(1)}</div></div>`;
   } else preview = '<div class="preview dim">Итог раунда появится после ввода</div>';
   const n = sheet.editId ? g.rounds.findIndex(r => r.id === sheet.editId) + 1 : g.rounds.length + 1;
+  const dl = dealerForRound(g, n - 1);
   return `<div class="sheet-backdrop"></div><div class="sheet">
     <div class="hdr"><button class="hbtn" data-action="sheetClose">✕</button><div class="htitle">Раунд ${n}</div><div class="hspace"></div></div>
     <div class="sheet-body">
+      ${dl ? `<div class="dealer-tag">🃏 Раздаёт: <b>${esc(playerName(dl))}</b></div>` : ''}
       <div class="sec"><div class="sec-title">Кто заказал козырь</div><div class="takers">${takers}</div></div>
       <div class="sec"><div class="sec-title">Козырь</div><div class="suits">${suits}</div></div>
       <div class="sec"><div class="sec-title">Комбинации</div><div class="decl-grid">${declCol(0)}${declCol(1)}</div></div>
@@ -988,27 +1058,28 @@ const ACTIONS = {
     NG.slots[i] = d.pid;
     render();
   },
-  clearSlot: d => { NG.slots[+d.i] = null; render(); },
+  clearSlot: d => { if (NG.dealer === NG.slots[+d.i]) NG.dealer = null; NG.slots[+d.i] = null; render(); },
+  pickDealer: d => { NG.dealer = d.pid; render(); },
   addPlayerNew: async () => {
     const p = await addPlayerFlow();
     if (p) { const i = NG.slots.indexOf(null); if (i !== -1) NG.slots[i] = p.id; }
     render();
   },
   startGame: () => {
-    if (!NG.slots.every(Boolean)) return;
+    if (!NG.slots.every(Boolean) || !NG.dealer) return;
     const t = parseInt(NG.target, 10);
     if (!(t >= 50)) { toast('Некорректная цель игры'); return; }
     data.games.push({
       id: uid('g'), createdAt: nowIso(), finishedAt: null, status: 'active',
       target: t, teams: [[NG.slots[0], NG.slots[1]], [NG.slots[2], NG.slots[3]]],
-      winnerTeam: null, rounds: []
+      firstDealerId: NG.dealer, winnerTeam: null, rounds: []
     });
     save();
     NG = null;
     nav('game');
   },
   openSheet: () => {
-    sheet = { editId: null, takerId: null, suit: null, decl: [{ terz: 0, fifty: 0, bella: false }, { terz: 0, fifty: 0, bella: false }], side: 0, tricksStr: '', kapot: null };
+    sheet = { editId: null, takerId: null, suit: null, decl: [{ terz: 0, fifty: 0, bella: false, deberc: 0 }, { terz: 0, fifty: 0, bella: false, deberc: 0 }], side: 0, tricksStr: '', kapot: null };
     renderOverlays();
   },
   editRound: d => {
@@ -1027,6 +1098,7 @@ const ACTIONS = {
   sheetSuit: d => { sheet.suit = d.s; updateSheet(); },
   declStep: d => {
     const t = +d.t, max = d.kind === 'terz' ? 4 : 2;
+    if (sheet.decl[t][d.kind] === undefined) sheet.decl[t][d.kind] = 0;
     const v = sheet.decl[t][d.kind] + (+d.d);
     sheet.decl[t][d.kind] = Math.max(0, Math.min(max, v));
     updateSheet();
@@ -1134,22 +1206,12 @@ const ACTIONS = {
     render();
   },
   exportData: () => doExport(),
-  saveToken: async () => {
-    const inp = document.getElementById('token-input');
-    const t = (inp ? inp.value : '').trim();
-    if (!t) { toast('Вставьте токен'); return; }
-    setToken(t);
-    render();
-    const ok = await pushCloud();
-    if (ok) toast('Запись в облако включена');
-  },
-  clearToken: () => { setToken(''); syncState.error = null; render(); },
   pullNow: async () => {
     const updated = await pullCloud();
     if (!updated) toast(syncState.error ? 'Ошибка синхронизации' : 'Данные уже актуальны');
   },
   pullForce: async () => {
-    const ok = await uiConfirm('Заменить облачными', 'Данные на этом устройстве будут заменены облачными без сравнения дат.', 'Заменить', true);
+    const ok = await uiConfirm('Заменить серверными', 'Данные на этом устройстве будут заменены копией с сервера без сравнения дат.', 'Заменить', true);
     if (ok) await pullCloud(true);
   }
 };
@@ -1243,6 +1305,7 @@ window.addEventListener('load', () => {
 });
 
 loadData();
+try { localStorage.removeItem('deberc.token'); } catch {}
 if (!location.hash) location.replace('#home');
 render();
 pullCloud(false, true);
