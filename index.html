@@ -15,10 +15,17 @@
 <style>
 * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
 :root {
+  color-scheme:dark;
   --bg:#0f141b; --surface:#171f2a; --surface2:#1f2937; --border:rgba(255,255,255,0.09);
   --text:#eef2f7; --text2:#aeb9c8; --muted:#7d8899; --grid:#26303e;
   --t0:#c98500; --t1:#3987e5; --t0-soft:rgba(201,133,0,0.14); --t1-soft:rgba(57,135,229,0.14);
+  --t1-fill:#2f74c9; --danger-fill:#c0392b;
   --danger:#e66767; --good:#0ca30c; --red:#e66767; --black:#cfd6df;
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration:0.01ms !important; animation-iteration-count:1 !important;
+    transition-duration:0.01ms !important; scroll-behavior:auto !important; }
+  .confetti { display:none; }
 }
 html,body { height:100%; }
 body {
@@ -30,6 +37,7 @@ body {
 }
 input { user-select:text; -webkit-user-select:text; }
 button { font:inherit; color:inherit; background:none; border:none; cursor:pointer; touch-action:manipulation; }
+:focus-visible { outline:3px solid var(--text); outline-offset:2px; }
 #app { height:100dvh; display:flex; flex-direction:column;
   padding:env(safe-area-inset-top) env(safe-area-inset-right) 0 env(safe-area-inset-left); }
 .hdr { display:flex; align-items:center; gap:8px; padding:10px 12px; min-height:56px; flex:0 0 auto; }
@@ -45,15 +53,15 @@ button { font:inherit; color:inherit; background:none; border:none; cursor:point
 .bigbtn { display:block; width:100%; min-height:64px; margin:12px 0; border-radius:16px;
   background:var(--surface); border:1px solid var(--border); font-size:19px; font-weight:600; }
 .bigbtn:active { background:var(--surface2); }
-.bigbtn.primary { background:var(--t1); border-color:transparent; color:#fff; }
+.bigbtn.primary { background:var(--t1-fill); border-color:transparent; color:#fff; }
 .bigbtn.primary:active { filter:brightness(1.15); }
 .btn { min-height:48px; padding:10px 20px; border-radius:12px; background:var(--surface2);
   border:1px solid var(--border); font-weight:600; font-size:16px; }
 .btn:active { filter:brightness(1.2); }
-.btn.primary { background:var(--t1); border-color:transparent; color:#fff; }
-.btn.danger { background:var(--danger); border-color:transparent; color:#fff; }
+.btn.primary { background:var(--t1-fill); border-color:transparent; color:#fff; }
+.btn.danger { background:var(--danger-fill); border-color:transparent; color:#fff; }
 .btn.ghost { background:transparent; }
-.btn.small { min-height:36px; padding:6px 14px; font-size:14px; }
+.btn.small { min-height:44px; min-width:44px; padding:6px 14px; font-size:14px; }
 .btn[disabled] { opacity:0.4; pointer-events:none; }
 .card { background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:14px 16px; margin:12px 0; }
 .notice { display:flex; gap:10px; align-items:flex-start; font-size:14px; color:var(--text2); line-height:1.45; }
@@ -90,12 +98,12 @@ button { font:inherit; color:inherit; background:none; border:none; cursor:point
 .rtaker.rt1 { color:var(--t1); }
 .rp { flex:1; font-size:19px; font-weight:700; font-variant-numeric:tabular-nums; }
 .rp i { display:block; font-style:normal; font-weight:400; font-size:12px; color:var(--muted); }
-.bait-badge { display:inline-block; font-size:11px; font-weight:800; color:#fff; background:var(--danger);
+.bait-badge { display:inline-block; font-size:11px; font-weight:800; color:#fff; background:var(--danger-fill);
   border-radius:6px; padding:1px 6px; vertical-align:2px; margin-left:5px; }
 .suit-red { color:var(--red); } .suit-black { color:var(--black); }
 .fab-wrap { position:fixed; left:0; right:0; bottom:0; padding:12px 16px calc(14px + env(safe-area-inset-bottom));
   background:linear-gradient(to top, var(--bg) 60%, transparent); display:flex; justify-content:center; z-index:20; }
-.fab { width:100%; max-width:500px; min-height:60px; border-radius:16px; background:var(--t1); color:#fff;
+.fab { width:100%; max-width:500px; min-height:60px; border-radius:16px; background:var(--t1-fill); color:#fff;
   font-size:20px; font-weight:700; box-shadow:0 6px 24px rgba(0,0,0,0.45); }
 .fab:active { filter:brightness(1.15); }
 .team-box { border:1px solid var(--border); border-radius:16px; padding:12px; margin:10px 0; background:var(--surface); border-left:4px solid var(--t0); }
@@ -151,7 +159,7 @@ button { font:inherit; color:inherit; background:none; border:none; cursor:point
 .tb-name { font-size:13px; color:var(--muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .tb-val { font-size:38px; font-weight:800; min-height:48px; font-variant-numeric:tabular-nums; }
 .tb-val.empty { color:var(--muted); }
-.kapot-btn { width:100%; min-height:40px; border-radius:10px; background:var(--surface2); font-size:14px; font-weight:600; color:var(--text2); }
+.kapot-btn { width:100%; min-height:44px; border-radius:10px; background:var(--surface2); font-size:14px; font-weight:600; color:var(--text2); }
 .kapot-btn.on { background:var(--t0-soft); color:var(--t0); }
 .tb1 .kapot-btn.on { background:var(--t1-soft); color:var(--t1); }
 .numpad { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; max-width:420px; margin:0 auto; }
@@ -171,8 +179,8 @@ button { font:inherit; color:inherit; background:none; border:none; cursor:point
   color:var(--text); font-size:18px; padding:10px 14px; }
 .m-input:focus { outline:none; border-color:var(--t1); }
 .m-btns { display:flex; gap:10px; justify-content:flex-end; margin-top:14px; }
-.m-btns.stack { flex-direction:column; }
-.m-btns.stack .btn { width:100%; }
+.m-btns.m-stack { flex-direction:column; }
+.m-btns.m-stack .btn { width:100%; }
 .btn.danger-ghost { background:transparent; color:var(--danger); }
 .victory { text-align:center; padding:40px 20px; }
 .victory .vt { font-size:64px; }
@@ -181,7 +189,8 @@ button { font:inherit; color:inherit; background:none; border:none; cursor:point
 .victory .btn { width:100%; max-width:360px; margin:8px auto; display:block; }
 #toast { position:fixed; left:0; right:0; bottom:calc(20px + env(safe-area-inset-bottom)); display:flex; justify-content:center;
   z-index:150; pointer-events:none; opacity:0; transform:translateY(12px); transition:all 0.25s; }
-#toast.show { opacity:1; transform:none; pointer-events:auto; }
+#toast.show { opacity:1; transform:none; }
+#toast .toast-box button { pointer-events:auto; }
 .toast-box { background:var(--surface2); border:1px solid var(--border); border-radius:14px; padding:12px 18px;
   font-size:15px; display:flex; align-items:center; gap:12px; box-shadow:0 6px 24px rgba(0,0,0,0.5); }
 .gcard { display:block; width:100%; text-align:left; background:var(--surface); border:1px solid var(--border);
@@ -356,7 +365,7 @@ button { font:inherit; color:inherit; background:none; border:none; cursor:point
 <div id="modal-root"></div>
 <div id="toast"></div>
 <script>
-const APP_VERSION = '1.7.0';
+const APP_VERSION = '1.7.1';
 const KEY = 'deberc.data';
 const CUR_SCHEMA = 4;
 const SYNC_URL = '/api/journal/deberc';
@@ -718,21 +727,38 @@ function modal(opts) {
     const w = document.createElement('div');
     w.className = 'backdrop';
     const btns = opts.buttons || [{ key: 'ok', label: 'OK', cls: 'primary' }];
-    w.innerHTML = `<div class="modal">
+    w.innerHTML = `<div class="modal" role="dialog" aria-modal="true" aria-label="${esc(opts.title || 'Выберите действие')}">
       ${opts.title ? `<div class="m-title">${opts.title}</div>` : ''}
       ${opts.body ? `<div class="m-body">${opts.body}</div>` : ''}
       ${opts.input !== undefined ? `<input class="m-input" type="text" maxlength="24" value="${esc(opts.input)}">` : ''}
-      <div class="m-btns ${opts.stack ? 'stack' : ''}">${btns.map(b => `<button class="btn ${b.cls || 'ghost'}" data-k="${b.key}">${b.label}</button>`).join('')}</div>
+      <div class="m-btns ${opts.stack ? 'm-stack' : ''}">${btns.map(b => `<button class="btn ${b.cls || 'ghost'}" data-k="${b.key}">${b.label}</button>`).join('')}</div>
     </div>`;
     document.getElementById('modal-root').appendChild(w);
     const inp = w.querySelector('.m-input');
+    const restoreTo = document.activeElement;
     if (inp) setTimeout(() => { inp.focus(); inp.select(); }, 60);
+    else w.querySelector('[data-k]').focus();
     w.addEventListener('click', e => {
       const b = e.target.closest('[data-k]');
       if (b) fin(b.dataset.k);
       else if (e.target === w && opts.dismiss !== false) fin(null);
     });
-    function fin(k) { w.remove(); res({ key: k, value: inp ? inp.value.trim() : null }); }
+    const onKey = e => {
+      if (e.key === 'Escape' && opts.dismiss !== false) { e.preventDefault(); fin(null); return; }
+      if (e.key !== 'Tab') return;
+      const f = [...w.querySelectorAll('[data-k], .m-input')];
+      const i = f.indexOf(document.activeElement);
+      const next = e.shiftKey ? (i <= 0 ? f.length - 1 : i - 1) : (i === f.length - 1 ? 0 : i + 1);
+      e.preventDefault();
+      f[next].focus();
+    };
+    document.addEventListener('keydown', onKey, true);
+    function fin(k) {
+      document.removeEventListener('keydown', onKey, true);
+      w.remove();
+      if (restoreTo && restoreTo.isConnected) restoreTo.focus();
+      res({ key: k, value: inp ? inp.value.trim() : null });
+    }
   });
 }
 const uiAlert = (t, b) => modal({ title: t, body: b, buttons: [{ key: 'ok', label: 'OK', cls: 'primary' }] }).then(() => {});
@@ -760,18 +786,20 @@ function toast(msg, opts = {}) {
 }
 
 function route() { return location.hash.slice(1) || 'home'; }
-function nav(to) { location.hash = to; }
+let ownNav = false;
+function nav(to) { ownNav = true; location.hash = to; }
+function navReplace(hash) { ownNav = true; location.replace(hash); }
 
 function header(title, back, extra) {
   return `<div class="hdr">
-    ${back ? `<button class="hbtn" data-action="nav" data-to="${back}">‹</button>` : '<div class="hspace"></div>'}
+    ${back ? `<button class="hbtn" data-action="nav" data-to="${back}" aria-label="Назад">‹</button>` : '<div class="hspace"></div>'}
     <div class="htitle">${title}</div>
     ${extra || '<div class="hspace"></div>'}
   </div>`;
 }
 
 function installHintHtml() {
-  return `<div class="card notice"><div>📲 Установите приложение: <b>Поделиться → На экран «Домой»</b>.<br>Данные хранятся внутри установленного приложения — вносите результаты после установки.</div><button class="nx" data-action="hintDismiss">✕</button></div>`;
+  return `<div class="card notice"><div>📲 Установите приложение: <b>Поделиться → На экран «Домой»</b>.<br>Данные хранятся внутри установленного приложения — вносите результаты после установки.</div><button class="nx" data-action="hintDismiss" aria-label="Скрыть подсказку">✕</button></div>`;
 }
 const getBackupAt = () => { try { return localStorage.getItem('deberc.backupAt'); } catch { return null; } };
 function backupNagHtml() {
@@ -932,7 +960,7 @@ function renderGame() {
   const dealer = dealerForRound(g, g.rounds.length);
   const gap = Math.abs(totals[0] - totals[1]);
   const info = [dealer ? `🃏 Раздаёт: <b>${esc(playerName(dealer))}</b>` : '', gap ? `разрыв <b>${gap}</b>` : ''].filter(Boolean).join(' · ');
-  return header('До ' + g.target, 'home', '<button class="hbtn" data-action="gameMenu">⋯</button>') + `
+  return header('До ' + g.target, 'home', '<button class="hbtn" data-action="gameMenu" aria-label="Меню партии">⋯</button>') + `
   <div class="content pad-fab">
     ${boardHtml(g, totals, null)}
     ${info ? `<div class="dealer-tag">${info}</div>` : ''}
@@ -1173,9 +1201,9 @@ function renderStats() {
       <div class="dbar-val">${s.declPts}</div>
     </div>`).join('');
     body = gap(detailedHands, totalHands, 'кто объявил комбинацию')
-      + `<table class="stat-table compact">
+      + `<div class="stat-scroll"><table class="stat-table compact">
         <thead><tr><th>Игрок</th><th>Терц</th><th>50</th><th>Деб</th><th>Белла</th><th>Очки</th><th title="Объявлений на 10 раздач">На 10</th></tr></thead>
-        <tbody>${rows}</tbody></table>
+        <tbody>${rows}</tbody></table></div>
       ${bars ? `<div class="sec"><div class="sec-title">Очки комбинациями</div><div class="legend-kinds">
         <span><i class="k-first"></i>терц</span><span><i class="k-own"></i>полтинник</span><span><i class="k-foreign"></i>деберц</span><span><i class="k-left"></i>белла</span>
       </div>${bars}</div>` : ''}`;
@@ -1251,7 +1279,7 @@ function renderSettings() {
   const players = data.players.slice().sort((a, b) => a.archived - b.archived || a.name.localeCompare(b.name, 'ru'));
   const plist = players.map(p => `<div class="prow ${p.archived ? 'arch' : ''}">
     <span class="pn">${esc(p.name)}</span>
-    <button class="btn small ghost" data-action="renamePlayer" data-pid="${p.id}">✎</button>
+    <button class="btn small ghost" data-action="renamePlayer" data-pid="${p.id}" aria-label="Переименовать: ${esc(p.name)}">✎</button>
     <button class="btn small ghost" data-action="toggleArchive" data-pid="${p.id}">${p.archived ? 'Вернуть' : 'Скрыть'}</button>
   </div>`).join('');
   const lb = getBackupAt();
@@ -1322,7 +1350,7 @@ function renderSheet() {
     </button>`;
   }).join('');
   const suits = Object.keys(SUITS).map(s =>
-    `<button class="suitbtn ${SUIT_CLS[s]} ${sheet.suit === s ? 'sel' : ''}" data-action="sheetSuit" data-s="${s}">${SUITS[s]}</button>`).join('');
+    `<button class="suitbtn ${SUIT_CLS[s]} ${sheet.suit === s ? 'sel' : ''}" data-action="sheetSuit" data-s="${s}" aria-label="${SUIT_NAMES[s]}" aria-pressed="${sheet.suit === s}">${SUITS[s]}</button>`).join('');
   const own = sheet.declOwner;
   const stepRow = (t, s, label, kind) => `<div class="decl-row"><span>${label}</span><div class="step">
       <button data-action="declStep" data-s="${s}" data-kind="${kind}" data-d="-1">−</button><b>${sheet.decl[t][s][kind]}</b><button data-action="declStep" data-s="${s}" data-kind="${kind}" data-d="1">+</button></div></div>`;
@@ -1349,7 +1377,7 @@ function renderSheet() {
   </div>`;
   const pad = `<div class="numpad ${sheet.kapot !== null ? 'off' : ''}">
     ${[1,2,3,4,5,6,7,8,9].map(d => `<button data-action="pad" data-d="${d}">${d}</button>`).join('')}
-    <button data-action="pad" data-d="clear">C</button><button data-action="pad" data-d="0">0</button><button data-action="pad" data-d="back">⌫</button>
+    <button data-action="pad" data-d="clear" aria-label="Очистить">C</button><button data-action="pad" data-d="0">0</button><button data-action="pad" data-d="back" aria-label="Стереть цифру">⌫</button>
   </div>`;
   let preview;
   if (sheet.takerId && tp) {
@@ -1375,7 +1403,7 @@ function renderSheet() {
     </div>
     ${sheet.callPhase === 2 && !sheet.forced && dl && sheet.takerId ? `<div class="ph-note">${teamOf(g, dl) === teamOf(g, sheet.takerId) ? 'полез в свои обязи' : 'полез в чужие обязи'}</div>` : ''}`;
   return `<div class="sheet-backdrop"></div><div class="sheet">
-    <div class="hdr"><button class="hbtn" data-action="sheetClose">✕</button><div class="htitle">Раунд ${n}</div><div class="hspace"></div></div>
+    <div class="hdr"><button class="hbtn" data-action="sheetClose" aria-label="Закрыть без записи">✕</button><div class="htitle">Раунд ${n}</div><div class="hspace"></div></div>
     <div class="sheet-body">
       ${dl ? `<div class="dealer-tag">🃏 Раздаёт: <b>${esc(playerName(dl))}</b></div>` : ''}
       <div class="sec"><div class="sec-title">Кто заказал козырь</div><div class="takers">${takers}</div></div>
@@ -1405,6 +1433,7 @@ function gameSummary(g) {
   return { rounds: rows.length, best, batons, top };
 }
 function confettiHtml() {
+  if (calmMotion()) return '';
   const cols = ['var(--t0)', 'var(--t1)', '#eef2f7', '#e0b341'];
   let s = '';
   for (let i = 0; i < 44; i++) {
@@ -1448,7 +1477,7 @@ function updateSheet() {
 
 function render() {
   let r = route();
-  if (r === 'game' && !activeGame()) { location.replace('#home'); return; }
+  if (r === 'game' && !activeGame()) { navReplace('#home'); return; }
   const app = document.getElementById('app');
   if (r === 'home') app.innerHTML = renderHome();
   else if (r === 'new') app.innerHTML = renderNew();
@@ -1458,15 +1487,17 @@ function render() {
   else if (r.startsWith('player/')) app.innerHTML = renderPlayer(r.slice(7));
   else if (r === 'stats') app.innerHTML = renderStats();
   else if (r === 'settings') app.innerHTML = renderSettings();
-  else { location.replace('#home'); return; }
+  else { navReplace('#home'); return; }
   if (r === 'game' || r.startsWith('game-view/')) bindChart();
   if (r === 'game') animateBoard(activeGame());
   syncWakeLock();
 }
+const calmMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
 function animateBoard(g) {
   const els = document.querySelectorAll('.tc-score');
   const bars = document.querySelectorAll('.pbar i');
   if (!g || els.length < 2) return;
+  if (calmMotion()) { lastBoard = { gid: g.id, totals: [...gameTotals(g)] }; return; }
   const to = gameTotals(g);
   const from = lastBoard && lastBoard.gid === g.id ? lastBoard.totals : to;
   lastBoard = { gid: g.id, totals: [...to] };
@@ -1809,11 +1840,21 @@ document.addEventListener('change', e => {
   if (!el) return;
   if (el.dataset.change === 'importFile' && el.files[0]) { doImport(el.files[0]); el.value = ''; }
 });
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Escape' || document.querySelector('#modal-root .backdrop')) return;
+  if (sheet) { e.preventDefault(); ACTIONS.sheetClose(); }
+});
 document.addEventListener('gesturestart', e => e.preventDefault());
 document.addEventListener('visibilitychange', syncWakeLock);
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') pullCloud(false, true); });
 setInterval(() => { if (!sheet && !victory && document.visibilityState === 'visible') pullCloud(false, true); }, 25000);
-window.addEventListener('hashchange', render);
+window.addEventListener('popstate', () => {
+  if (ownNav || (!victory && !sheet)) return;
+  victory = null;
+  sheet = null;
+  renderOverlays();
+});
+window.addEventListener('hashchange', () => { ownNav = false; render(); });
 window.addEventListener('load', () => {
   if (!('serviceWorker' in navigator)) return;
   const had = !!navigator.serviceWorker.controller;
