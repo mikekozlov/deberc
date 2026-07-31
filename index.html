@@ -308,7 +308,7 @@ button { font:inherit; color:inherit; background:none; border:none; cursor:point
 <div id="modal-root"></div>
 <div id="toast"></div>
 <script>
-const APP_VERSION = '1.6.0';
+const APP_VERSION = '1.6.1';
 const KEY = 'deberc.data';
 const CUR_SCHEMA = 3;
 const SYNC_URL = '/api/journal/deberc';
@@ -434,7 +434,7 @@ async function pullCloud(force = false, auto = false) {
     return false;
   } finally {
     syncState.busy = false;
-    if (route() === 'settings') render();
+    if (route() === 'settings' || route() === 'home') render();
   }
 }
 async function pushCloud() {
@@ -462,7 +462,7 @@ async function pushCloud() {
     return false;
   } finally {
     syncState.busy = false;
-    if (route() === 'settings') render();
+    if (route() === 'settings' || route() === 'home') render();
   }
 }
 
