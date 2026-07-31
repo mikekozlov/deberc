@@ -22,7 +22,7 @@
 }
 html,body { height:100%; }
 body {
-  background:var(--bg); color:var(--text);
+  background:var(--bg) radial-gradient(120% 78% at 50% -14%, #1b2635 0%, rgba(27,38,53,0) 62%) no-repeat; color:var(--text);
   font-family:system-ui,-apple-system,"Segoe UI",sans-serif; font-size:17px;
   position:fixed; inset:0; overflow:hidden; width:100%;
   overscroll-behavior:none; touch-action:manipulation;
@@ -78,7 +78,7 @@ button { font:inherit; color:inherit; background:none; border:none; cursor:point
 .tc-score { font-size:52px; font-weight:800; line-height:1.15; font-variant-numeric:tabular-nums; }
 .tc-crown { font-size:24px; }
 .pbar { height:5px; background:var(--surface2); border-radius:3px; margin:8px 10px 0; overflow:hidden; }
-.pbar i { display:block; height:100%; border-radius:3px; background:var(--t0); }
+.pbar i { display:block; height:100%; border-radius:3px; background:var(--t0); transition:width 0.6s cubic-bezier(0.2,0.8,0.25,1); }
 .tc1 .pbar i { background:var(--t1); }
 .round-row { display:flex; align-items:center; width:100%; gap:6px; padding:11px 10px; border-radius:12px;
   background:var(--surface); border:1px solid var(--border); margin:6px 0; text-align:center; }
@@ -221,6 +221,7 @@ button { font:inherit; color:inherit; background:none; border:none; cursor:point
 .chart { width:100%; height:auto; display:block; touch-action:pan-y; }
 .chart .grid { stroke:var(--grid); stroke-width:1; }
 .chart .tick { fill:var(--muted); font-size:12px; text-anchor:end; }
+.chart.mini .tick { font-size:17px; }
 .chart .tick.end { text-anchor:end; }
 .chart .target { stroke:var(--muted); stroke-width:1.5; stroke-dasharray:6 5; }
 .chart .l0 { stroke:var(--t0); } .chart .l1 { stroke:var(--t1); }
@@ -247,6 +248,58 @@ button { font:inherit; color:inherit; background:none; border:none; cursor:point
 .chip.own0.sel { background:var(--t0-soft); border-color:var(--t0); color:var(--t0); }
 .chip.own1.sel { background:var(--t1-soft); border-color:var(--t1); color:var(--t1); }
 .bella-row { display:flex; gap:10px; }
+.brandbox { text-align:center; }
+.brand-suits { display:flex; gap:12px; justify-content:center; font-size:15px; color:var(--muted); margin-top:2px; }
+.home-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-top:12px; }
+.tile { min-height:96px; border-radius:18px; background:var(--surface); border:1px solid var(--border);
+  display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; font-size:14px; font-weight:600; color:var(--text2); }
+.tile:active { background:var(--surface2); }
+.tile .ti { font-size:28px; line-height:1; }
+.tc-left { font-size:12px; color:var(--muted); margin-top:7px; }
+.rec-row { display:flex; align-items:center; gap:10px; width:100%; text-align:left; padding:12px 14px; margin:8px 0;
+  border-radius:14px; background:var(--surface); border:1px solid var(--border); }
+.rec-row:active { background:var(--surface2); }
+.rec-date { font-size:12px; color:var(--muted); flex:0 0 auto; }
+.rec-teams { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:15px; font-weight:600; }
+.rec-score { flex:0 0 auto; font-size:16px; font-weight:700; font-variant-numeric:tabular-nums; }
+.rhead { display:flex; align-items:center; gap:6px; padding:2px 11px 4px; font-size:11px; font-weight:700;
+  text-transform:uppercase; letter-spacing:0.6px; color:var(--muted); text-align:center; }
+.rhead .rtaker { color:var(--muted); font-weight:700; }
+.rhead .rp { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:11px; font-weight:700; text-transform:none; letter-spacing:0; }
+.rhead .rp.c0 { color:var(--t0); } .rhead .rp.c1 { color:var(--t1); }
+.rp.c0 { color:var(--t0); } .rp.c1 { color:var(--t1); }
+.round-row.last { border-color:rgba(255,255,255,0.2); }
+.round-row.fresh { animation:pop 0.9s ease-out; }
+@keyframes pop { 0% { transform:scale(0.97); background:var(--surface2); box-shadow:0 0 0 2px var(--t1); } 100% { transform:none; } }
+@keyframes fadein { from { opacity:0; } }
+@keyframes slideup { from { opacity:0; transform:translateY(30px); } }
+.sheet-backdrop { animation:fadein 0.2s ease; }
+.sheet { animation:slideup 0.24s cubic-bezier(0.2,0.8,0.25,1); }
+.sheet .sec { margin:12px 0; }
+.sheet .dealer-tag { margin-bottom:8px; }
+.sheet .taker { min-height:80px; padding:7px 4px; }
+.sheet .taker .av { width:38px; height:38px; font-size:17px; }
+.sheet .suitbtn { min-height:52px; font-size:29px; }
+.sheet .chip { min-height:44px; padding:8px 15px; font-size:15px; }
+.sheet .trick-box { padding:8px; }
+.sheet .tb-val { font-size:34px; min-height:42px; }
+.sheet .numpad { gap:7px; }
+.sheet .numpad button { min-height:48px; font-size:24px; }
+.sheet .sec-title { margin-bottom:6px; }
+.sheet-body { padding-bottom:10px; }
+.sheet-foot { flex-direction:column; align-items:center; gap:10px; }
+.preview.foot { width:100%; max-width:500px; margin:0; padding:10px 14px; }
+.preview.alarm { border-color:var(--danger); background:rgba(230,103,103,0.13); }
+.pv-box { display:flex; flex-direction:column; align-items:center; gap:3px; width:100%; }
+.pv-line { display:flex; align-items:center; justify-content:center; gap:14px; }
+.pv-after { font-size:12px; color:var(--muted); }
+.confetti { position:fixed; inset:0; z-index:52; pointer-events:none; overflow:hidden; }
+.confetti i { position:absolute; top:-14px; width:7px; height:13px; border-radius:2px; animation-name:fall; animation-timing-function:linear; animation-fill-mode:forwards; }
+@keyframes fall { to { transform:translateY(108vh) rotate(720deg); opacity:0.15; } }
+.vsum { max-width:360px; margin:22px auto 26px; }
+.vsum-row { display:flex; align-items:baseline; justify-content:space-between; gap:12px; padding:9px 0; border-bottom:1px solid var(--grid); font-size:15px; color:var(--text2); }
+.vsum-row:last-child { border-bottom:0; }
+.vsum-row b { color:var(--text); font-variant-numeric:tabular-nums; }
 </style>
 </head>
 <body>
@@ -255,7 +308,7 @@ button { font:inherit; color:inherit; background:none; border:none; cursor:point
 <div id="modal-root"></div>
 <div id="toast"></div>
 <script>
-const APP_VERSION = '1.5.1';
+const APP_VERSION = '1.6.0';
 const KEY = 'deberc.data';
 const CUR_SCHEMA = 3;
 const SYNC_URL = '/api/journal/deberc';
@@ -296,6 +349,8 @@ let victory = null;
 let statsTab = 'players';
 let toastTimer = null;
 let wakeLock = null;
+let freshRoundId = null;
+let lastBoard = null;
 
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const uid = p => p + '_' + Math.random().toString(36).slice(2, 8) + Date.now().toString(36).slice(-4);
@@ -601,6 +656,9 @@ async function uiMenu(items) {
   const r = await modal({ stack: true, buttons: items.map(i => ({ key: i.key, label: i.label, cls: i.danger ? 'danger-ghost' : '' })).concat([{ key: 'cancel', label: 'Отмена', cls: 'ghost' }]) });
   return r.key;
 }
+function buzz(pattern) {
+  try { if (navigator.vibrate) navigator.vibrate(pattern); } catch {}
+}
 function toast(msg, opts = {}) {
   const el = document.getElementById('toast');
   el.innerHTML = `<div class="toast-box">${msg}${opts.btn ? `<button class="btn small primary" data-action="${opts.action}">${opts.btn}</button>` : ''}</div>`;
@@ -633,6 +691,19 @@ function backupNagHtml() {
   if ((last && since < 5) || (!last && fin.length < 3)) return '';
   return `<button class="card notice" style="width:100%;text-align:left" data-action="nav" data-to="settings"><div>💾 ${last ? 'С последнего бэкапа сыграно игр: ' + since : 'Бэкап ещё ни разу не делался'}. Экспортируйте данные в Настройках.</div></button>`;
 }
+function recentHtml() {
+  const games = finishedGames().slice().sort((a, b) => (a.finishedAt < b.finishedAt ? 1 : -1)).slice(0, 3);
+  if (!games.length) return '';
+  const rows = games.map(g => {
+    const t = gameTotals(g);
+    return `<button class="rec-row" data-action="nav" data-to="game-view/${g.id}">
+      <span class="rec-date">${fmtDT(g.finishedAt)}</span>
+      <span class="rec-teams">${esc(teamNames(g, g.winnerTeam))}</span>
+      <span class="rec-score"><span style="color:var(--t0)">${t[0]}</span> : <span style="color:var(--t1)">${t[1]}</span></span>
+    </button>`;
+  }).join('');
+  return `<div class="sec"><div class="sec-title">Последние партии</div>${rows}</div>`;
+}
 function renderHome() {
   const g = activeGame();
   let cont = '';
@@ -643,15 +714,21 @@ function renderHome() {
       <div class="cc-score"><span><span class="dot d0"></span>${esc(teamNames(g, 0))}</span><b>${t[0]} : ${t[1]}</b><span>${esc(teamNames(g, 1))}<span class="dot d1" style="margin:0 0 0 6px"></span></span></div>
     </button>`;
   }
-  return `<div class="hdr center"><div class="brand">Дебертц</div></div>
+  return `<div class="hdr center"><div class="brandbox">
+    <div class="brand">Дебертц</div>
+    <div class="brand-suits"><span>♠</span><span class="suit-red">♥</span><span class="suit-red">♦</span><span>♣</span></div>
+  </div></div>
   <div class="content">
     ${IS_IOS && !STANDALONE && !localStorage.getItem('deberc.hint') ? installHintHtml() : ''}
     ${backupNagHtml()}
     ${cont}
     <button class="bigbtn primary" data-action="goNew">Новая игра</button>
-    <button class="bigbtn" data-action="nav" data-to="history">История</button>
-    <button class="bigbtn" data-action="nav" data-to="stats">Статистика</button>
-    <button class="bigbtn" data-action="nav" data-to="settings">Настройки</button>
+    <div class="home-grid">
+      <button class="tile" data-action="nav" data-to="history"><span class="ti">🗂</span>История</button>
+      <button class="tile" data-action="nav" data-to="stats"><span class="ti">📊</span>Статистика</button>
+      <button class="tile" data-action="nav" data-to="settings"><span class="ti">⚙️</span>Настройки</button>
+    </div>
+    ${recentHtml()}
   </div>`;
 }
 
@@ -687,16 +764,23 @@ function renderNew() {
   </div>`;
 }
 
-function roundRowHtml(g, row, idx) {
+function roundRowHtml(g, row, idx, isLast) {
   const mark = t => (row.baton === t ? `<span class="bait-badge" title="Батон №${row.batonNo}${row.batonNo > FREE_BATONS ? ' — штраф −100' : ''}">Б${row.batonNo}</span>` : '')
     + (row.lyzha === t ? '<span class="bait-badge" title="Лыжа">Л</span>' : '');
-  return `<button class="round-row" data-action="roundInfo" data-rid="${row.round.id}" data-gid="${g.id}">
+  const cls = ['round-row', isLast ? 'last' : '', row.round.id === freshRoundId ? 'fresh' : ''].filter(Boolean).join(' ');
+  return `<button class="${cls}" data-action="roundInfo" data-rid="${row.round.id}" data-gid="${g.id}">
     <span class="rn">${idx + 1}</span>
     <span class="rsuit">${suitHtml(row.round.trumpSuit)}</span>
     <span class="rtaker rt${row.takerTeam}">${esc(playerName(row.round.trumpTakerId))}</span>
-    <span class="rp">${row.totals[0]}${mark(0)}<i>${row.cum[0]}</i></span>
-    <span class="rp">${row.totals[1]}${mark(1)}<i>${row.cum[1]}</i></span>
+    <span class="rp c0">${row.totals[0]}${mark(0)}<i>${row.cum[0]}</i></span>
+    <span class="rp c1">${row.totals[1]}${mark(1)}<i>${row.cum[1]}</i></span>
   </button>`;
+}
+function roundHeadHtml(g) {
+  return `<div class="rhead">
+    <span class="rn">№</span><span class="rsuit"></span><span class="rtaker">Заказал</span>
+    <span class="rp c0">${esc(teamNames(g, 0))}</span><span class="rp c1">${esc(teamNames(g, 1))}</span>
+  </div>`;
 }
 function declSummary(d) {
   const parts = [];
@@ -731,10 +815,12 @@ function roundDetailsHtml(g, rows, idx) {
 }
 function boardHtml(g, totals, winner) {
   const pct = t => Math.max(0, Math.min(100, Math.round(totals[t] / g.target * 100)));
+  const left = t => g.target - totals[t];
   const card = t => `<div class="team-card tc${t}">
     <div class="tc-name">${winner === t ? '<span class="tc-crown">🏆</span> ' : ''}${esc(teamNames(g, t))}</div>
     <div class="tc-score">${totals[t]}</div>
     <div class="pbar"><i style="width:${pct(t)}%"></i></div>
+    ${g.status === 'active' ? `<div class="tc-left">${left(t) > 0 ? 'ещё ' + left(t) : 'цель взята'}</div>` : ''}
   </div>`;
   return `<div class="board">${card(0)}${card(1)}</div>`;
 }
@@ -742,13 +828,16 @@ function renderGame() {
   const g = activeGame();
   const rows = gameRows(g);
   const totals = rows.length ? rows[rows.length - 1].cum : [0, 0];
-  const list = rows.map((r, i) => roundRowHtml(g, r, i)).reverse().join('');
+  const list = rows.map((r, i) => roundRowHtml(g, r, i, i === rows.length - 1)).reverse().join('');
   const dealer = dealerForRound(g, g.rounds.length);
+  const gap = Math.abs(totals[0] - totals[1]);
+  const info = [dealer ? `🃏 Раздаёт: <b>${esc(playerName(dealer))}</b>` : '', gap ? `разрыв <b>${gap}</b>` : ''].filter(Boolean).join(' · ');
   return header('До ' + g.target, 'home', '<button class="hbtn" data-action="gameMenu">⋯</button>') + `
   <div class="content pad-fab">
     ${boardHtml(g, totals, null)}
-    ${dealer ? `<div class="dealer-tag">🃏 Раздаёт: <b>${esc(playerName(dealer))}</b></div>` : ''}
-    ${rows.length ? `<div class="sec-title">Раунды — нажмите для деталей</div>${list}` : '<div class="empty">Раундов пока нет.<br>Раздавайте карты и жмите «+ Раунд»</div>'}
+    ${info ? `<div class="dealer-tag">${info}</div>` : ''}
+    ${rows.length > 1 ? chartSvg(g, rows, { h: 168, legend: false }) : ''}
+    ${rows.length ? `<div class="sec-title" style="margin-top:18px">Раунды — нажмите для деталей</div>${roundHeadHtml(g)}${list}` : '<div class="empty">Раундов пока нет.<br>Раздавайте карты и жмите «+ Раунд»</div>'}
   </div>
   <div class="fab-wrap"><button class="fab" data-action="openSheet">+ Раунд</button></div>`;
 }
@@ -767,29 +856,31 @@ function renderHistory() {
 
 const CH = { W: 640, H: 300, L: 48, R: 16, T: 16, B: 26 };
 function tickStep(m) { for (const s of [50, 100, 200, 250, 500, 1000, 2000]) if (m / s <= 6) return s; return 5000; }
-function chartSvg(g, rows) {
+function chartSvg(g, rows, opt = {}) {
   const n = rows.length;
   if (!n) return '';
+  const H = opt.h || CH.H;
   const allC = rows.flatMap(r => r.cum);
   const maxY = Math.max(g.target, ...allC) * 1.06;
   const minY = Math.min(0, ...allC);
   const X = i => CH.L + (CH.W - CH.L - CH.R) * i / n;
-  const Y = v => CH.H - CH.B - (CH.H - CH.T - CH.B) * (v - minY) / (maxY - minY);
+  const Y = v => H - CH.B - (H - CH.T - CH.B) * (v - minY) / (maxY - minY);
   const line = t => [[0, 0]].concat(rows.map((r, i) => [i + 1, r.cum[t]])).map(p => X(p[0]).toFixed(1) + ',' + Y(p[1]).toFixed(1)).join(' ');
   const step = tickStep(maxY - minY);
   let grid = '';
   for (let v = Math.ceil(minY / step) * step; v <= maxY; v += step) grid += `<line class="grid" x1="${CH.L}" x2="${CH.W - CH.R}" y1="${Y(v).toFixed(1)}" y2="${Y(v).toFixed(1)}"/><text class="tick" x="${CH.L - 8}" y="${(Y(v) + 4).toFixed(1)}">${v}</text>`;
   const ty = Y(g.target).toFixed(1);
   const end = t => `<circle class="pt${t}" cx="${X(n).toFixed(1)}" cy="${Y(rows[n - 1].cum[t]).toFixed(1)}" r="4.5"/>`;
-  return `<div class="legend"><span class="lg0"><i></i>${esc(teamNames(g, 0))}</span><span class="lg1"><i></i>${esc(teamNames(g, 1))}</span></div>
-  <div class="chart-wrap">
-    <svg class="chart" viewBox="0 0 ${CH.W} ${CH.H}" data-n="${n}" data-gid="${g.id}">
+  const legend = opt.legend === false ? '' :
+    `<div class="legend"><span class="lg0"><i></i>${esc(teamNames(g, 0))}</span><span class="lg1"><i></i>${esc(teamNames(g, 1))}</span></div>`;
+  return legend + `<div class="chart-wrap">
+    <svg class="chart ${opt.h ? 'mini' : ''}" viewBox="0 0 ${CH.W} ${H}" data-n="${n}" data-gid="${g.id}">
       ${grid}
       <line class="target" x1="${CH.L}" x2="${CH.W - CH.R}" y1="${ty}" y2="${ty}"/>
       <polyline class="l0" points="${line(0)}"/>
       <polyline class="l1" points="${line(1)}"/>
       ${end(0)}${end(1)}
-      <line class="cross" x1="0" x2="0" y1="${CH.T}" y2="${CH.H - CH.B}"/>
+      <line class="cross" x1="0" x2="0" y1="${CH.T}" y2="${H - CH.B}"/>
     </svg>
     <div class="chart-tip"></div>
   </div>`;
@@ -972,6 +1063,11 @@ function sheetRound(tp) {
 function sheetValid() {
   return !!(sheet.takerId && sheet.suit && sheetTricks());
 }
+function previewAfter(g, tp) {
+  const r = { ...sheetRound(tp), id: sheet.editId || '_pv' };
+  const rounds = sheet.editId ? g.rounds.map(x => (x.id === sheet.editId ? r : x)) : g.rounds.concat([r]);
+  return gameRows({ ...g, rounds }).slice(-1)[0].cum;
+}
 function renderSheet() {
   const g = activeGame();
   if (!g || !sheet) return '';
@@ -1015,10 +1111,17 @@ function renderSheet() {
   let preview;
   if (sheet.takerId && tp) {
     const s = scoreRound(sheetRound(tp), g.teams, batonsBefore(g, sheet.editId));
+    const after = previewAfter(g, tp);
     const badge = t => (s.baton === t ? ` <span class="bait-badge">БАТОН №${s.batonNo}${s.batonNo > FREE_BATONS ? ' · −100' : ''}</span>` : '')
       + (s.lyzha === t ? ' <span class="bait-badge">ЛЫЖА</span>' : '');
-    preview = `<div class="preview"><div class="pv" style="color:var(--t0)">${s.totals[0]}${badge(0)}</div><div class="pv-sep">:</div><div class="pv" style="color:var(--t1)">${s.totals[1]}${badge(1)}</div></div>`;
-  } else preview = '<div class="preview dim">Итог раунда появится после ввода</div>';
+    const alarm = s.baton !== null || s.lyzha !== null;
+    preview = `<div class="preview foot ${alarm ? 'alarm' : ''}"><div class="pv-box">
+      <div class="pv-line">
+        <div class="pv" style="color:var(--t0)">${s.totals[0]}${badge(0)}</div><div class="pv-sep">:</div><div class="pv" style="color:var(--t1)">${s.totals[1]}${badge(1)}</div>
+      </div>
+      <div class="pv-after">счёт станет ${after[0]} : ${after[1]}</div>
+    </div></div>`;
+  } else preview = '<div class="preview foot dim">Итог раунда появится после ввода</div>';
   const n = sheet.editId ? g.rounds.findIndex(r => r.id === sheet.editId) + 1 : g.rounds.length + 1;
   const dl = dealerForRound(g, n - 1);
   return `<div class="sheet-backdrop"></div><div class="sheet">
@@ -1027,23 +1130,56 @@ function renderSheet() {
       ${dl ? `<div class="dealer-tag">🃏 Раздаёт: <b>${esc(playerName(dl))}</b></div>` : ''}
       <div class="sec"><div class="sec-title">Кто заказал козырь</div><div class="takers">${takers}</div></div>
       <div class="sec"><div class="sec-title">Козырь</div><div class="suits">${suits}</div></div>
-      <div class="sec"><div class="sec-title">Комбинации — у кого старшая</div>${declSec}</div>
       <div class="sec"><div class="sec-title">Очки за взятки (всего ${DEAL_TOTAL})</div><div class="tricks">${trickBox(0)}${trickBox(1)}</div>${pad}</div>
-      ${preview}
+      <div class="sec"><div class="sec-title">Комбинации — у кого старшая</div>${declSec}</div>
     </div>
-    <div class="sheet-foot"><button class="btn primary" data-action="sheetSave" ${sheetValid() ? '' : 'disabled'}>Записать</button></div>
+    <div class="sheet-foot">
+      ${preview}
+      <button class="btn primary" data-action="sheetSave" ${sheetValid() ? '' : 'disabled'}>Записать</button>
+    </div>
   </div>`;
+}
+function gameSummary(g) {
+  const rows = gameRows(g);
+  const w = g.winnerTeam;
+  const best = rows.reduce((a, r, i) => (!a || r.totals[w] > a.v ? { v: r.totals[w], n: i + 1 } : a), null);
+  const batons = [0, 1].map(t => rows.filter(r => r.baton === t).length);
+  const calls = {};
+  rows.forEach(r => {
+    const c = calls[r.round.trumpTakerId] ??= { n: 0, ok: 0 };
+    c.n++;
+    if (!callFailed(r)) c.ok++;
+  });
+  const top = Object.entries(calls).sort((a, b) => b[1].ok - a[1].ok || b[1].n - a[1].n)[0];
+  return { rounds: rows.length, best, batons, top };
+}
+function confettiHtml() {
+  const cols = ['var(--t0)', 'var(--t1)', '#eef2f7', '#e0b341'];
+  let s = '';
+  for (let i = 0; i < 44; i++) {
+    s += `<i style="left:${Math.round(Math.random() * 100)}%;background:${cols[i % 4]};`
+      + `animation-delay:${(Math.random() * 1.1).toFixed(2)}s;animation-duration:${(1.7 + Math.random() * 1.5).toFixed(2)}s"></i>`;
+  }
+  return `<div class="confetti">${s}</div>`;
 }
 function renderVictory() {
   const g = data.games.find(x => x.id === victory);
   if (!g) return '';
   const t = gameTotals(g);
   const w = g.winnerTeam;
-  return `<div class="sheet-backdrop"></div><div class="sheet"><div class="sheet-body victory">
+  const s = gameSummary(g);
+  const row = (k, v) => `<div class="vsum-row"><span>${k}</span><b>${v}</b></div>`;
+  return `<div class="sheet-backdrop"></div>${confettiHtml()}<div class="sheet"><div class="sheet-body victory">
     <div class="vt">🏆</div>
     <h2>${esc(teamNames(g, w))}</h2>
     <div style="color:var(--muted)">победа в игре до ${g.target}</div>
     <div class="vs"><span style="color:var(--t0)">${t[0]}</span> : <span style="color:var(--t1)">${t[1]}</span></div>
+    <div class="vsum">
+      ${row('Раундов сыграно', s.rounds)}
+      ${s.best ? row('Лучший раунд победителей', `${s.best.v} · №${s.best.n}`) : ''}
+      ${row('Батоны', `<span style="color:var(--t0)">${s.batons[0]}</span> : <span style="color:var(--t1)">${s.batons[1]}</span>`)}
+      ${s.top ? row('Больше всех заказов взял', `${esc(playerName(s.top[0]))} — ${s.top[1].ok} из ${s.top[1].n}`) : ''}
+    </div>
     <button class="btn primary" data-action="victoryDone">Готово</button>
     <button class="btn ghost" data-action="victoryFix">Исправить последний раунд</button>
   </div></div>`;
@@ -1071,8 +1207,32 @@ function render() {
   else if (r === 'stats') app.innerHTML = renderStats();
   else if (r === 'settings') app.innerHTML = renderSettings();
   else { location.replace('#home'); return; }
-  if (r.startsWith('game-view/')) bindChart();
+  if (r === 'game' || r.startsWith('game-view/')) bindChart();
+  if (r === 'game') animateBoard(activeGame());
   syncWakeLock();
+}
+function animateBoard(g) {
+  const els = document.querySelectorAll('.tc-score');
+  const bars = document.querySelectorAll('.pbar i');
+  if (!g || els.length < 2) return;
+  const to = gameTotals(g);
+  const from = lastBoard && lastBoard.gid === g.id ? lastBoard.totals : to;
+  lastBoard = { gid: g.id, totals: [...to] };
+  const pctOf = v => Math.max(0, Math.min(100, Math.round(v / g.target * 100)));
+  [0, 1].forEach(t => {
+    if (from[t] === to[t]) return;
+    if (bars[t]) {
+      bars[t].style.width = pctOf(from[t]) + '%';
+      requestAnimationFrame(() => { bars[t].style.width = pctOf(to[t]) + '%'; });
+    }
+    const started = performance.now();
+    const step = now => {
+      const k = Math.min(1, (now - started) / 520);
+      els[t].textContent = Math.round(from[t] + (to[t] - from[t]) * (1 - Math.pow(1 - k, 3)));
+      if (k < 1) requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+  });
 }
 
 async function addPlayerFlow() {
@@ -1089,6 +1249,7 @@ function finishGame(g, w) {
   g.winnerTeam = w;
   g.finishedAt = nowIso();
   save();
+  buzz([40, 90, 40, 90, 150]);
   sheet = null;
   victory = g.id;
   renderOverlays();
@@ -1219,10 +1380,16 @@ const ACTIONS = {
     if (sheet.editId) {
       const i = g.rounds.findIndex(r => r.id === sheet.editId);
       g.rounds[i] = { ...base, id: sheet.editId, createdAt: g.rounds[i].createdAt };
+      freshRoundId = sheet.editId;
     } else {
-      g.rounds.push({ ...base, id: uid('r'), createdAt: nowIso() });
+      const added = { ...base, id: uid('r'), createdAt: nowIso() };
+      g.rounds.push(added);
+      freshRoundId = added.id;
     }
     save();
+    const saved = gameRows(g).find(x => x.round.id === freshRoundId);
+    buzz(saved && (saved.baton !== null || saved.lyzha !== null) ? [25, 70, 25] : 18);
+    setTimeout(() => { freshRoundId = null; }, 1600);
     const w = detectWinner(gameTotals(g), g.target);
     if (w !== null) {
       if (sheet.editId) {
