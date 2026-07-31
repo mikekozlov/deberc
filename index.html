@@ -365,7 +365,7 @@ button { font:inherit; color:inherit; background:none; border:none; cursor:point
 <div id="modal-root"></div>
 <div id="toast"></div>
 <script>
-const APP_VERSION = '1.7.1';
+const APP_VERSION = '1.7.2';
 const KEY = 'deberc.data';
 const CUR_SCHEMA = 4;
 const SYNC_URL = '/api/journal/deberc';
@@ -1047,7 +1047,8 @@ function renderGameView(id) {
   if (!g) return header('Игра', 'history') + '<div class="content"><div class="empty">Игра не найдена</div></div>';
   const rows = gameRows(g);
   const totals = rows.length ? rows[rows.length - 1].cum : [0, 0];
-  return header(fmtDT(g.finishedAt || g.createdAt), 'history') + `<div class="content">
+  const menu = `<button class="hbtn" data-action="viewMenu" data-gid="${g.id}" aria-label="Меню партии">⋯</button>`;
+  return header(fmtDT(g.finishedAt || g.createdAt), 'history', menu) + `<div class="content">
     ${boardHtml(g, totals, g.winnerTeam)}
     ${chartSvg(g, rows)}
     <div class="sec"><div class="sec-title">Раунды — нажмите для деталей</div>${rows.map((r, i) => roundRowHtml(g, r, i)).join('')}</div>
@@ -1725,6 +1726,18 @@ const ACTIONS = {
       const ok = await uiConfirm('Удалить игру', 'Игра будет удалена без сохранения результата.', 'Удалить', true);
       if (ok) { data.games = data.games.filter(x => x !== g); save(); nav('home'); }
     }
+  },
+  viewMenu: async d => {
+    const g = data.games.find(x => x.id === d.gid);
+    if (!g) return;
+    const k = await uiMenu([{ key: 'del', label: 'Удалить партию', danger: true }]);
+    if (k !== 'del') return;
+    const ok = await uiConfirm('Удалить партию', `«${esc(teamNames(g, 0))}» против «${esc(teamNames(g, 1))}», ${fmtDT(g.finishedAt || g.createdAt)}. Партия исчезнет из истории, статистика пересчитается.`, 'Удалить', true);
+    if (!ok) return;
+    data.games = data.games.filter(x => x !== g);
+    save();
+    nav('history');
+    toast('Партия удалена');
   },
   victoryDone: () => { victory = null; renderOverlays(); nav('home'); },
   victoryFix: () => {
