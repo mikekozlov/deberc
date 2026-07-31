@@ -300,6 +300,54 @@ button { font:inherit; color:inherit; background:none; border:none; cursor:point
 .vsum-row { display:flex; align-items:baseline; justify-content:space-between; gap:12px; padding:9px 0; border-bottom:1px solid var(--grid); font-size:15px; color:var(--text2); }
 .vsum-row:last-child { border-bottom:0; }
 .vsum-row b { color:var(--text); font-variant-numeric:tabular-nums; }
+.phases { display:flex; gap:8px; }
+.ph { flex:1; min-height:48px; border-radius:12px; background:var(--surface); border:2px solid var(--border); font-weight:600; font-size:15px; color:var(--text2); }
+.ph.sel { border-color:var(--t1); background:var(--surface2); color:var(--text); }
+.ph.warn.sel { border-color:var(--danger); color:var(--danger); }
+.ph[disabled] { opacity:0.35; pointer-events:none; }
+.ph-note { text-align:center; font-size:13px; color:var(--muted); margin-top:8px; }
+.decl-cols { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:10px; }
+.decl-cols .decl-row { font-size:14px; gap:2px; }
+.decl-cols .step button { width:34px; height:38px; font-size:20px; }
+.decl-cols .step b { width:20px; font-size:16px; }
+.bella-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+.tabs { flex-wrap:wrap; }
+.tabs .tab { flex:1 1 28%; min-width:88px; font-size:14px; }
+.pcard { display:block; width:100%; text-align:left; background:var(--surface); border:1px solid var(--border);
+  border-radius:16px; padding:14px 16px; margin:10px 0; }
+.pcard:active { background:var(--surface2); }
+.pc-top { display:flex; align-items:baseline; justify-content:space-between; gap:10px; margin-bottom:8px; }
+.pc-name { font-size:17px; font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.pc-meta { font-size:13px; color:var(--muted); flex:0 0 auto; }
+.pc-sub { font-size:13px; color:var(--text2); margin-top:8px; }
+.stack { display:flex; height:10px; border-radius:5px; overflow:hidden; background:var(--surface2); margin:10px 0 4px; }
+.stack i { display:block; height:100%; }
+.k-first { background:var(--t1); } .k-left { background:var(--danger); }
+.k-own { background:var(--t0); } .k-foreign { background:#4fb477; }
+.kinds { display:flex; flex-direction:column; gap:2px; }
+.kind-row { display:flex; align-items:center; gap:8px; font-size:14px; color:var(--text2); padding:5px 0; }
+.kind-row i { width:10px; height:10px; border-radius:3px; flex:0 0 auto; }
+.kind-row span:first-of-type { flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.kind-row b { color:var(--text); font-variant-numeric:tabular-nums; }
+.kind-ok { width:44px; text-align:right; color:var(--muted); font-variant-numeric:tabular-nums; }
+.legend-kinds { display:flex; flex-wrap:wrap; gap:12px; font-size:13px; color:var(--text2); margin-bottom:10px; }
+.legend-kinds i { display:inline-block; width:10px; height:10px; border-radius:3px; margin-right:5px; }
+.dbar { display:flex; align-items:center; gap:10px; margin:8px 0; }
+.dbar-name { width:92px; font-size:14px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:0 0 auto; }
+.dbar-track { flex:1; }
+.dbar-fill { min-width:14px; }
+.dbar .stack { margin:0; }
+.dbar-val { width:44px; text-align:right; font-size:14px; font-variant-numeric:tabular-nums; color:var(--text2); flex:0 0 auto; }
+.stat-table.compact { min-width:0; width:100%; }
+.stat-table.compact th, .stat-table.compact td { padding:9px 4px; font-size:14px; }
+.stat-table.compact td.pname { font-size:15px; }
+.suit-bar { display:flex; align-items:center; gap:10px; padding:6px 0; font-size:20px; }
+.sb-track { flex:1; height:9px; border-radius:5px; background:var(--surface2); overflow:hidden; }
+.sb-track i { display:block; height:100%; background:var(--t1); border-radius:5px; }
+.suit-bar b { width:28px; text-align:right; font-size:15px; font-variant-numeric:tabular-nums; }
+.form { display:flex; gap:5px; margin:10px 0 0; }
+.form i { flex:1; height:8px; border-radius:4px; background:var(--danger); max-width:24px; }
+.form i.w { background:var(--good); }
 </style>
 </head>
 <body>
@@ -308,9 +356,9 @@ button { font:inherit; color:inherit; background:none; border:none; cursor:point
 <div id="modal-root"></div>
 <div id="toast"></div>
 <script>
-const APP_VERSION = '1.6.1';
+const APP_VERSION = '1.7.0';
 const KEY = 'deberc.data';
-const CUR_SCHEMA = 3;
+const CUR_SCHEMA = 4;
 const SYNC_URL = '/api/journal/deberc';
 const DEAL_TOTAL = 162;
 const DECL_PTS = { terz: 20, fifty: 50, bella: 20, deberc: 100 };
@@ -320,6 +368,12 @@ const FREE_BATONS = 2;
 const SUITS = { s: '♠', c: '♣', h: '♥', d: '♦' };
 const SUIT_NAMES = { s: 'пики', c: 'трефы', h: 'черви', d: 'бубны' };
 const SUIT_CLS = { s: 'suit-black', c: 'suit-black', h: 'suit-red', d: 'suit-red' };
+const CALL_KINDS = [
+  ['first', '1-й круг', 'заказал по вскрытой масти'],
+  ['left', 'Оставили', 'раздающего оставили — заказ вынужденный'],
+  ['own', 'Свои обязи', 'взял на 2-м круге, когда раздавала своя пара'],
+  ['foreign', 'Чужие обязи', 'взял на 2-м круге, когда раздавала пара соперников']
+];
 const MIGRATIONS = {
   1: d => {
     d.schemaVersion = 2;
@@ -336,6 +390,15 @@ const MIGRATIONS = {
       g.firstDealerId ??= null;
       g.rounds.forEach(r => r.declarations.forEach(x => { x.deberc ??= 0; }));
     });
+    return d;
+  },
+  3: d => {
+    d.schemaVersion = 4;
+    d.games.forEach(g => g.rounds.forEach(r => {
+      r.declarers ??= null;
+      r.callPhase ??= null;
+      r.forced ??= false;
+    }));
     return d;
   }
 };
@@ -475,9 +538,14 @@ function seqPoints(d) {
 function declPoints(d) {
   return seqPoints(d) + (d.bella ? DECL_PTS.bella : 0);
 }
+function teamDecl(round, t) {
+  if (!round.declarers) return round.declarations[t];
+  const [a, b] = round.declarers[t];
+  return { terz: a.terz + b.terz, fifty: a.fifty + b.fifty, deberc: a.deberc + b.deberc, bella: a.bella || b.bella };
+}
 function scoreRound(round, teams, batons = [0, 0]) {
   const takerTeam = teams.findIndex(t => t.includes(round.trumpTakerId));
-  const raw = [0, 1].map(i => round.trickPoints[i] + (round.trickPoints[i] > 0 ? declPoints(round.declarations[i]) : 0));
+  const raw = [0, 1].map(i => round.trickPoints[i] + (round.trickPoints[i] > 0 ? declPoints(teamDecl(round, i)) : 0));
   const lv = raw[0] < LYZHA_LIMIT ? 0 : raw[1] < LYZHA_LIMIT ? 1 : null;
   if (lv !== null) {
     const totals = [];
@@ -525,6 +593,15 @@ function dealerForRound(g, idx) {
   const seats = seatingOrder(g);
   const fi = seats.indexOf(g.firstDealerId);
   return fi === -1 ? null : seats[(fi + idx) % 4];
+}
+const teamOf = (g, pid) => g.teams.findIndex(t => t.includes(pid));
+function callKind(g, round, idx) {
+  if (!round.callPhase) return null;
+  if (round.forced) return 'left';
+  if (round.callPhase === 1) return 'first';
+  const dealer = dealerForRound(g, idx);
+  if (!dealer) return null;
+  return teamOf(g, dealer) === teamOf(g, round.trumpTakerId) ? 'own' : 'foreign';
 }
 function gameTotals(game) {
   const rows = gameRows(game);
@@ -595,6 +672,21 @@ function runSelfTest() {
     ['без первого раздающего', dealerForRound({ teams, firstDealerId: null, rounds: [] }, 0), null]
   ];
   dl.forEach(([name, got, want]) => results.push({ case: name, pass: got === want, got: String(got), want: String(want) }));
+  const DR = (a, b, c, d) => [[a || D0, b || D0], [c || D0, d || D0]];
+  const rd = (taker, tp, declarers, phase, forced) => ({ trumpTakerId: taker, trumpSuit: 'h', trickPoints: tp, declarers: declarers || null, callPhase: phase ?? null, forced: !!forced, kapot: null });
+  [
+    ['комбинации партнёров складываются', scoreRound(rd('a', [100, 62], DR(D({ terz: 1 }), D({ fifty: 1 }))), teams), [170, 62]],
+    ['белла у второго партнёра', scoreRound(rd('a', [100, 62], DR(D0, D({ bella: true }))), teams), [120, 62]],
+    ['комбинация партнёра без взяток не считается', scoreRound(rd('c', [0, 162], DR(D({ terz: 1 }), D0)), teams), [-100, 162]]
+  ].forEach(([name, got, want]) => results.push({ case: name, pass: eq(got.totals, want), got: JSON.stringify(got.totals), want: JSON.stringify(want) }));
+  const kg = { teams, firstDealerId: 'c', rounds: [] };
+  [
+    ['заказ на 1-м круге', callKind(kg, rd('a', [100, 62], null, 1), 0), 'first'],
+    ['раздающего оставили', callKind(kg, rd('c', [100, 62], null, 2, true), 0), 'left'],
+    ['полез в свои обязи', callKind(kg, rd('d', [100, 62], null, 2), 0), 'own'],
+    ['полез в чужие обязи', callKind(kg, rd('a', [100, 62], null, 2), 0), 'foreign'],
+    ['круг не записан — без классификации', callKind(kg, rd('a', [100, 62], null, null), 0), null]
+  ].forEach(([name, got, want]) => results.push({ case: name, pass: got === want, got: String(got), want: String(want) }));
   const w = [
     ['победа одной пары', detectWinner([1015, 900], 1010), 0],
     ['обе перешли — большая', detectWinner([1015, 1040], 1010), 1],
@@ -797,16 +889,24 @@ function roundDetailsHtml(g, rows, idx) {
   const rd = (k, v) => `<div class="rd-row"><span class="rd-k">${k}</span><span class="rd-v">${v}</span></div>`;
   const pair = t => `<span style="color:var(--t${t})">${esc(teamNames(g, t))}</span>`;
   const two = (a, b) => `<b style="color:var(--t0)">${a}</b> : <b style="color:var(--t1)">${b}</b>`;
-  const owner = seqPoints(r.declarations[0]) ? 0 : seqPoints(r.declarations[1]) ? 1 : null;
+  const td = [teamDecl(r, 0), teamDecl(r, 1)];
+  const owner = seqPoints(td[0]) ? 0 : seqPoints(td[1]) ? 1 : null;
+  const byPlayer = t => (r.declarers || []).length
+    ? r.declarers[t].map((d, s) => (seqPoints(d) ? `${esc(playerName(g.teams[t][s]))} — ${declSummary(d)}` : '')).filter(Boolean).join('<br>')
+    : '';
   const combos = owner === null ? '—'
-    : `${pair(owner)}<br>${declSummary(r.declarations[owner])} · ${seqPoints(r.declarations[owner])}${note(owner)}`;
-  const bt = r.declarations[0].bella ? 0 : r.declarations[1].bella ? 1 : null;
-  const bella = bt === null ? '—' : `${pair(bt)} · 20${note(bt)}`;
+    : `${pair(owner)}<br>${byPlayer(owner) || declSummary(td[owner])} · ${seqPoints(td[owner])}${note(owner)}`;
+  const bseat = r.declarers ? [[0, 0], [0, 1], [1, 0], [1, 1]].find(([t, s]) => r.declarers[t][s].bella) : null;
+  const bt = bseat ? bseat[0] : td[0].bella ? 0 : td[1].bella ? 1 : null;
+  const bella = bt === null ? '—'
+    : `${bseat ? esc(playerName(g.teams[bseat[0]][bseat[1]])) : pair(bt)} · 20${note(bt)}`;
+  const kind = callKind(g, r, idx);
   const dealer = dealerForRound(g, idx);
   const mark = t => (row.baton === t ? ` <span class="bait-badge">БАТОН №${row.batonNo}${row.batonNo > FREE_BATONS ? ' · −100' : ''}</span>` : '')
     + (row.lyzha === t ? ' <span class="bait-badge">ЛЫЖА</span>' : '');
   return rd('Раздавал', dealer ? esc(playerName(dealer)) : '—')
     + rd('Заказал', `<span style="color:var(--t${row.takerTeam})">${esc(playerName(r.trumpTakerId))}</span> · ${suitHtml(r.trumpSuit)} ${SUIT_NAMES[r.trumpSuit]}`)
+    + rd('Как достался заказ', kind ? CALL_KINDS.find(k => k[0] === kind)[1] : '—')
     + rd('Очки за взятки', two(r.trickPoints[0], r.trickPoints[1]))
     + rd('Комбинации', combos)
     + rd('Белла', bella)
@@ -932,17 +1032,32 @@ function streaks(seq) {
   for (let i = seq.length - 1; i >= 0 && seq[i]; i--) cur++;
   return { cur, best };
 }
+function emptyPlayerStats() {
+  return {
+    games: 0, wins: 0, seq: [], hands: 0, deals: 0,
+    calls: 0, callWins: 0, batons: 0, lyzhas: 0,
+    suits: { s: 0, c: 0, h: 0, d: 0 },
+    kinds: { first: { n: 0, ok: 0 }, left: { n: 0, ok: 0 }, own: { n: 0, ok: 0 }, foreign: { n: 0, ok: 0 } },
+    decl: { terz: 0, fifty: 0, deberc: 0, bella: 0 }, declPts: 0, declHands: 0,
+    partners: {}
+  };
+}
 function computeStats() {
   const games = finishedGames().slice().sort((a, b) => (a.finishedAt < b.finishedAt ? -1 : 1));
   const P = {}, PAIR = {}, MU = {};
+  let detailedHands = 0, phasedHands = 0, totalHands = 0;
   for (const g of games) {
     const keys = g.teams.map(t => t.slice().sort().join('|'));
     for (let ti = 0; ti < 2; ti++) {
       const win = g.winnerTeam === ti;
-      for (const pid of g.teams[ti]) {
-        const s = P[pid] ??= { games: 0, wins: 0, calls: 0, callWins: 0, batons: 0, seq: [] };
+      g.teams[ti].forEach((pid, si) => {
+        const s = P[pid] ??= emptyPlayerStats();
         s.games++; if (win) s.wins++; s.seq.push(win);
-      }
+        s.hands += g.rounds.length;
+        const mate = g.teams[ti][1 - si];
+        const pr = s.partners[mate] ??= { games: 0, wins: 0 };
+        pr.games++; if (win) pr.wins++;
+      });
       const pk = PAIR[keys[ti]] ??= { key: keys[ti], games: 0, wins: 0 };
       pk.games++; if (win) pk.wins++;
     }
@@ -950,42 +1065,120 @@ function computeStats() {
     const m = MU[mk] ??= { keys: keys.slice().sort(), games: 0, wins: {} };
     m.games++;
     m.wins[keys[g.winnerTeam]] = (m.wins[keys[g.winnerTeam]] || 0) + 1;
-    const batons = [0, 0];
-    for (const r of g.rounds) {
-      const sc = scoreRound(r, g.teams, batons);
-      if (sc.baton !== null) batons[sc.baton]++;
+    gameRows(g).forEach((row, idx) => {
+      const r = row.round;
+      totalHands++;
       const ps = P[r.trumpTakerId];
       if (ps) {
         ps.calls++;
-        if (!callFailed(sc)) ps.callWins++;
-        if (sc.baton !== null) ps.batons++;
+        if (!callFailed(row)) ps.callWins++;
+        if (row.baton !== null) ps.batons++;
+        ps.suits[r.trumpSuit]++;
+        const kind = callKind(g, r, idx);
+        if (kind) {
+          ps.kinds[kind].n++;
+          if (!callFailed(row)) ps.kinds[kind].ok++;
+        }
       }
-    }
+      if (row.lyzha !== null) g.teams[row.lyzha].forEach(pid => { if (P[pid]) P[pid].lyzhas++; });
+      if (callKind(g, r, idx)) phasedHands++;
+      const dealer = dealerForRound(g, idx);
+      if (dealer && P[dealer]) P[dealer].deals++;
+      if (!r.declarers) return;
+      detailedHands++;
+      [0, 1].forEach(t => r.declarers[t].forEach((d, s) => {
+        const pp = P[g.teams[t][s]];
+        if (!pp) return;
+        pp.declHands++;
+        pp.decl.terz += d.terz;
+        pp.decl.fifty += d.fifty;
+        pp.decl.deberc += d.deberc;
+        if (d.bella) pp.decl.bella++;
+        pp.declPts += declPoints(d);
+      }));
+    });
   }
-  return { P, PAIR, MU };
+  return { P, PAIR, MU, detailedHands, phasedHands, totalHands };
 }
 const pct = (a, b) => b ? Math.round(a / b * 100) : 0;
 const wrHtml = p => `<div class="wr"><div class="wr-bar"><i style="width:${p}%"></i></div><span>${p}%</span></div>`;
 const pairLabel = key => key.split('|').map(playerName).join(' + ');
+const KIND_CLS = { first: 'k-first', left: 'k-left', own: 'k-own', foreign: 'k-foreign' };
+function stackHtml(parts) {
+  const sum = parts.reduce((a, p) => a + p.v, 0);
+  if (!sum) return '';
+  return `<div class="stack">${parts.filter(p => p.v).map(p => `<i class="${p.cls}" style="width:${p.v / sum * 100}%" title="${p.title}"></i>`).join('')}</div>`;
+}
+const per10 = (n, hands) => (hands ? (n / hands * 10).toFixed(1) : '0.0');
+function plural(n, one, few, many) {
+  const a = Math.abs(n) % 100;
+  if (a > 10 && a < 20) return many;
+  const b = a % 10;
+  return b === 1 ? one : b > 1 && b < 5 ? few : many;
+}
+const nGames = n => `${n} ${plural(n, 'игра', 'игры', 'игр')}`;
+const nWins = n => `${n} ${plural(n, 'победа', 'победы', 'побед')}`;
+const nCalls = n => `${n} ${plural(n, 'заказ', 'заказа', 'заказов')}`;
+function playerCardHtml(pid, s) {
+  const st = streaks(s.seq);
+  return `<button class="pcard" data-action="nav" data-to="player/${pid}">
+    <div class="pc-top"><span class="pc-name">${esc(playerName(pid))}</span><span class="pc-meta">${nGames(s.games)} · ${nWins(s.wins)}</span></div>
+    ${wrHtml(pct(s.wins, s.games))}
+    <div class="pc-sub">заказы ${s.calls || 0}${s.calls ? ' (' + pct(s.callWins, s.calls) + '%)' : ''} · батоны ${s.batons} · серия ${st.cur} / ${st.best}</div>
+  </button>`;
+}
 function renderStats() {
-  const { P, PAIR, MU } = computeStats();
-  const tabs = `<div class="tabs">
-    <button class="tab ${statsTab === 'players' ? 'sel' : ''}" data-action="statsTab" data-tab="players">Игроки</button>
-    <button class="tab ${statsTab === 'pairs' ? 'sel' : ''}" data-action="statsTab" data-tab="pairs">Пары</button>
-    <button class="tab ${statsTab === 'vs' ? 'sel' : ''}" data-action="statsTab" data-tab="vs">Встречи</button>
-  </div>`;
+  const { P, PAIR, MU, detailedHands, phasedHands, totalHands } = computeStats();
+  const TABS = [['players', 'Игроки'], ['calls', 'Заказы'], ['decl', 'Комбинации'], ['pairs', 'Пары'], ['vs', 'Встречи']];
+  const tabs = `<div class="tabs">${TABS.map(([k, label]) =>
+    `<button class="tab ${statsTab === k ? 'sel' : ''}" data-action="statsTab" data-tab="${k}">${label}</button>`).join('')}</div>`;
+  const byWinrate = Object.entries(P).sort((a, b) => pct(b[1].wins, b[1].games) - pct(a[1].wins, a[1].games) || b[1].games - a[1].games);
+  const gap = (n, total, what) => n < total
+    ? `<div class="notice" style="margin:0 0 12px">Данные есть по ${n} раздачам из ${total}: ${what} записывается с версии 1.7. Раздачи, введённые раньше, в этот подсчёт не попадают.</div>` : '';
   let body = '';
   if (!finishedGames().length) body = '<div class="empty">Статистика появится после первой завершённой игры</div>';
   else if (statsTab === 'players') {
-    const rows = Object.entries(P)
-      .sort((a, b) => pct(b[1].wins, b[1].games) - pct(a[1].wins, a[1].games) || b[1].games - a[1].games)
-      .map(([pid, s]) => {
-        const st = streaks(s.seq);
-        return `<tr><td class="pname">${esc(playerName(pid))}</td><td>${s.games}</td><td>${s.wins}</td><td>${wrHtml(pct(s.wins, s.games))}</td><td>${st.cur} / ${st.best}</td><td>${s.calls ? s.calls + ' (' + pct(s.callWins, s.calls) + '%)' : '—'}</td><td>${s.batons || '—'}</td></tr>`;
+    body = byWinrate.map(([pid, s]) => playerCardHtml(pid, s)).join('');
+  } else if (statsTab === 'calls') {
+    const rows = Object.entries(P).filter(([, s]) => s.calls).sort((a, b) => b[1].calls - a[1].calls).map(([pid, s]) => {
+      const parts = CALL_KINDS.map(([k, label]) => ({ v: s.kinds[k].n, cls: KIND_CLS[k], title: label + ': ' + s.kinds[k].n }));
+      const known = CALL_KINDS.reduce((a, [k]) => a + s.kinds[k].n, 0);
+      const detail = CALL_KINDS.map(([k, label]) => {
+        const x = s.kinds[k];
+        return `<div class="kind-row"><i class="${KIND_CLS[k]}"></i><span>${label}</span><b>${x.n}</b><span class="kind-ok">${x.n ? pct(x.ok, x.n) + '%' : '—'}</span></div>`;
       }).join('');
-    body = `<div class="stat-scroll"><table class="stat-table">
-      <thead><tr><th>Игрок</th><th>Игры</th><th>Победы</th><th>Винрейт</th><th>Серия</th><th>Заказы (успех)</th><th title="Заказал козырь и получил батон">Батоны</th></tr></thead>
-      <tbody>${rows}</tbody></table></div>`;
+      return `<div class="card">
+        <div class="pc-top"><span class="pc-name">${esc(playerName(pid))}</span><span class="pc-meta">${nCalls(s.calls)} · ${pct(s.callWins, s.calls)}% успешных</span></div>
+        ${known ? stackHtml(parts) + `<div class="kinds">${detail}</div>` : '<div class="pc-sub">как достался заказ — не записано</div>'}
+        <div class="pc-sub">раздавал ${s.deals} раз${s.batons ? ' · батоны ' + s.batons : ''}</div>
+      </div>`;
+    }).join('');
+    body = gap(phasedHands, totalHands, 'как достался заказ') + (rows || '<div class="empty">Заказов пока нет</div>');
+  } else if (statsTab === 'decl') {
+    const list = Object.entries(P).sort((a, b) => b[1].declPts - a[1].declPts);
+    const rows = list.map(([pid, s]) => `<tr>
+      <td class="pname">${esc(playerName(pid))}</td>
+      <td>${s.decl.terz || '—'}</td><td>${s.decl.fifty || '—'}</td><td>${s.decl.deberc || '—'}</td><td>${s.decl.bella || '—'}</td>
+      <td>${s.declPts}</td><td>${per10(s.decl.terz + s.decl.fifty + s.decl.deberc + s.decl.bella, s.declHands)}</td>
+    </tr>`).join('');
+    const maxPts = Math.max(...list.map(([, s]) => s.declPts), 1);
+    const bars = list.filter(([, s]) => s.declPts).map(([pid, s]) => `<div class="dbar">
+      <div class="dbar-name">${esc(playerName(pid))}</div>
+      <div class="dbar-track"><div class="dbar-fill" style="width:${s.declPts / maxPts * 100}%">${stackHtml([
+        { v: s.decl.terz * 20, cls: 'k-first', title: 'терц: ' + s.decl.terz },
+        { v: s.decl.fifty * 50, cls: 'k-own', title: 'полтинник: ' + s.decl.fifty },
+        { v: s.decl.deberc * 100, cls: 'k-foreign', title: 'деберц: ' + s.decl.deberc },
+        { v: s.decl.bella * 20, cls: 'k-left', title: 'белла: ' + s.decl.bella }
+      ])}</div></div>
+      <div class="dbar-val">${s.declPts}</div>
+    </div>`).join('');
+    body = gap(detailedHands, totalHands, 'кто объявил комбинацию')
+      + `<table class="stat-table compact">
+        <thead><tr><th>Игрок</th><th>Терц</th><th>50</th><th>Деб</th><th>Белла</th><th>Очки</th><th title="Объявлений на 10 раздач">На 10</th></tr></thead>
+        <tbody>${rows}</tbody></table>
+      ${bars ? `<div class="sec"><div class="sec-title">Очки комбинациями</div><div class="legend-kinds">
+        <span><i class="k-first"></i>терц</span><span><i class="k-own"></i>полтинник</span><span><i class="k-foreign"></i>деберц</span><span><i class="k-left"></i>белла</span>
+      </div>${bars}</div>` : ''}`;
   } else if (statsTab === 'pairs') {
     const rows = Object.values(PAIR)
       .sort((a, b) => pct(b.wins, b.games) - pct(a.wins, a.games) || b.games - a.games)
@@ -1003,6 +1196,55 @@ function renderStats() {
     }).join('') || '<div class="empty">Встреч пока нет</div>';
   }
   return header('Статистика', 'home') + `<div class="content">${tabs}${body}</div>`;
+}
+
+function renderPlayer(pid) {
+  const p = playerById(pid);
+  if (!p) return header('Игрок', 'stats') + '<div class="content"><div class="empty">Игрок не найден</div></div>';
+  const { P } = computeStats();
+  const s = P[pid];
+  if (!s) return header(esc(p.name), 'stats') + '<div class="content"><div class="empty">Завершённых партий с этим игроком нет</div></div>';
+  const st = streaks(s.seq);
+  const row = (k, v) => `<div class="rd-row"><span class="rd-k">${k}</span><span class="rd-v">${v}</span></div>`;
+  const maxSuit = Math.max(...Object.values(s.suits), 1);
+  const suitBars = Object.keys(SUITS).map(x => `<div class="suit-bar">
+    <span class="${SUIT_CLS[x]}">${SUITS[x]}</span>
+    <div class="sb-track"><i style="width:${s.suits[x] / maxSuit * 100}%"></i></div>
+    <b>${s.suits[x]}</b>
+  </div>`).join('');
+  const kindRows = CALL_KINDS.map(([k, label, hint]) => {
+    const x = s.kinds[k];
+    return `<div class="kind-row" title="${hint}"><i class="${KIND_CLS[k]}"></i><span>${label}</span><b>${x.n}</b><span class="kind-ok">${x.n ? pct(x.ok, x.n) + '%' : '—'}</span></div>`;
+  }).join('');
+  const partners = Object.entries(s.partners).sort((a, b) => pct(b[1].wins, b[1].games) - pct(a[1].wins, a[1].games) || b[1].games - a[1].games)
+    .map(([mate, x]) => `<div class="kind-row"><span>${esc(playerName(mate))}</span><b>${x.wins} / ${x.games}</b><span class="kind-ok">${pct(x.wins, x.games)}%</span></div>`).join('');
+  const form = s.seq.slice(-12).map(w => `<i class="${w ? 'w' : 'l'}"></i>`).join('');
+  return header(esc(p.name), 'stats') + `<div class="content">
+    <div class="card">
+      <div class="pc-top"><span class="pc-name">${nGames(s.games)} · ${nWins(s.wins)}</span><span class="pc-meta">серия ${st.cur} / ${st.best}</span></div>
+      ${wrHtml(pct(s.wins, s.games))}
+      <div class="form">${form}</div>
+      <div class="pc-sub">последние партии, слева старые</div>
+    </div>
+    <div class="sec"><div class="sec-title">Заказы</div><div class="card">
+      ${row('Всего заказов', `${s.calls} из ${s.hands} раздач`)}
+      ${row('Успешных', s.calls ? `${s.callWins} (${pct(s.callWins, s.calls)}%)` : '—')}
+      ${row('Батоны', s.batons)}
+      ${row('Раздавал', s.deals)}
+      <div class="kinds" style="margin-top:10px">${kindRows}</div>
+    </div></div>
+    <div class="sec"><div class="sec-title">Козырь при заказе</div><div class="card">${suitBars}</div></div>
+    <div class="sec"><div class="sec-title">Комбинации</div><div class="card">
+      ${row('Терц', s.decl.terz)}
+      ${row('Полтинник', s.decl.fifty)}
+      ${row('Деберц', s.decl.deberc)}
+      ${row('Белла', s.decl.bella)}
+      ${row('Очков комбинациями', s.declPts)}
+      ${row('На 10 раздач', per10(s.decl.terz + s.decl.fifty + s.decl.deberc + s.decl.bella, s.declHands))}
+      ${s.declHands < s.hands ? `<div class="rd-note" style="margin-top:8px">детализация есть по ${s.declHands} раздачам из ${s.hands}</div>` : ''}
+    </div></div>
+    ${partners ? `<div class="sec"><div class="sec-title">С партнёрами</div><div class="card"><div class="kinds">${partners}</div></div></div>` : ''}
+  </div>`;
 }
 
 function renderSettings() {
@@ -1057,11 +1299,12 @@ function sheetTricks() {
 function sheetRound(tp) {
   return {
     trumpTakerId: sheet.takerId, trumpSuit: sheet.suit, trickPoints: tp,
-    declarations: [{ ...sheet.decl[0] }, { ...sheet.decl[1] }], kapot: sheet.kapot
+    declarers: sheet.decl.map(pair => pair.map(d => ({ ...d }))),
+    callPhase: sheet.callPhase, forced: sheet.forced, kapot: sheet.kapot
   };
 }
 function sheetValid() {
-  return !!(sheet.takerId && sheet.suit && sheetTricks());
+  return !!(sheet.takerId && sheet.suit && sheet.callPhase && sheetTricks());
 }
 function previewAfter(g, tp) {
   const r = { ...sheetRound(tp), id: sheet.editId || '_pv' };
@@ -1081,23 +1324,23 @@ function renderSheet() {
   const suits = Object.keys(SUITS).map(s =>
     `<button class="suitbtn ${SUIT_CLS[s]} ${sheet.suit === s ? 'sel' : ''}" data-action="sheetSuit" data-s="${s}">${SUITS[s]}</button>`).join('');
   const own = sheet.declOwner;
-  const stepRow = (label, kind) => `<div class="decl-row"><span>${label}</span><div class="step">
-      <button data-action="declStep" data-kind="${kind}" data-d="-1">−</button><b>${sheet.decl[own][kind]}</b><button data-action="declStep" data-kind="${kind}" data-d="1">+</button></div></div>`;
+  const stepRow = (t, s, label, kind) => `<div class="decl-row"><span>${label}</span><div class="step">
+      <button data-action="declStep" data-s="${s}" data-kind="${kind}" data-d="-1">−</button><b>${sheet.decl[t][s][kind]}</b><button data-action="declStep" data-s="${s}" data-kind="${kind}" data-d="1">+</button></div></div>`;
+  const seatCol = (t, s) => `<div class="decl-col dc${t}">
+      <div class="decl-head">${esc(playerName(g.teams[t][s]))}</div>
+      ${stepRow(t, s, 'Терц', 'terz')}
+      ${stepRow(t, s, '50', 'fifty')}
+      ${stepRow(t, s, 'Деберц', 'deberc')}
+    </div>`;
+  const bellaBtn = (t, s) => `<button class="bella-btn ${sheet.decl[t][s].bella ? 'on' : ''}" data-action="bella" data-t="${t}" data-s="${s}">${esc(playerName(g.teams[t][s]))}${sheet.decl[t][s].bella ? ' ✓' : ''}</button>`;
   const declSec = `<div class="chips">
       <button class="chip own0 ${own === 0 ? 'sel' : ''}" data-action="declOwner" data-t="0">${esc(teamNames(g, 0))}</button>
       <button class="chip own1 ${own === 1 ? 'sel' : ''}" data-action="declOwner" data-t="1">${esc(teamNames(g, 1))}</button>
       <button class="chip ${own === null ? 'sel' : ''}" data-action="declOwner" data-t="">Ни у кого</button>
     </div>
-    ${own === null ? '' : `<div class="decl-col dc${own}" style="margin-top:10px">
-      ${stepRow('Терц (3 подряд) · 20', 'terz')}
-      ${stepRow('Полтинник (4) · 50', 'fifty')}
-      ${stepRow('Деберц (6+) · 100', 'deberc')}
-    </div>`}
-    <div class="decl-row" style="margin-top:12px"><span>Белла · 20</span></div>
-    <div class="bella-row">
-      <button class="bella-btn ${sheet.decl[0].bella ? 'on' : ''}" data-action="bella" data-t="0">${esc(teamNames(g, 0))} ${sheet.decl[0].bella ? '✓' : ''}</button>
-      <button class="bella-btn ${sheet.decl[1].bella ? 'on' : ''}" data-action="bella" data-t="1">${esc(teamNames(g, 1))} ${sheet.decl[1].bella ? '✓' : ''}</button>
-    </div>`;
+    ${own === null ? '' : `<div class="decl-cols">${seatCol(own, 0)}${seatCol(own, 1)}</div>`}
+    <div class="decl-row" style="margin-top:12px"><span>Белла · 20 — у кого</span></div>
+    <div class="bella-grid">${bellaBtn(0, 0)}${bellaBtn(0, 1)}${bellaBtn(1, 0)}${bellaBtn(1, 1)}</div>`;
   const tp = sheetTricks();
   const trickBox = t => `<div class="trick-box tb${t} ${sheet.kapot === null && sheet.side === t ? 'active' : ''}" data-action="sheetSide" data-i="${t}">
     <div class="tb-name">${esc(teamNames(g, t))}</div>
@@ -1124,6 +1367,13 @@ function renderSheet() {
   } else preview = '<div class="preview foot dim">Итог раунда появится после ввода</div>';
   const n = sheet.editId ? g.rounds.findIndex(r => r.id === sheet.editId) + 1 : g.rounds.length + 1;
   const dl = dealerForRound(g, n - 1);
+  const dealerTook = !!(dl && sheet.takerId === dl);
+  const phase = `<div class="phases">
+      <button class="ph ${sheet.callPhase === 1 ? 'sel' : ''}" data-action="sheetPhase" data-p="1">1-й круг</button>
+      <button class="ph ${sheet.callPhase === 2 && !sheet.forced ? 'sel' : ''}" data-action="sheetPhase" data-p="2">2-й круг</button>
+      <button class="ph warn ${sheet.forced ? 'sel' : ''}" data-action="sheetPhase" data-p="forced" ${dealerTook ? '' : 'disabled'}>Оставили</button>
+    </div>
+    ${sheet.callPhase === 2 && !sheet.forced && dl && sheet.takerId ? `<div class="ph-note">${teamOf(g, dl) === teamOf(g, sheet.takerId) ? 'полез в свои обязи' : 'полез в чужие обязи'}</div>` : ''}`;
   return `<div class="sheet-backdrop"></div><div class="sheet">
     <div class="hdr"><button class="hbtn" data-action="sheetClose">✕</button><div class="htitle">Раунд ${n}</div><div class="hspace"></div></div>
     <div class="sheet-body">
@@ -1131,6 +1381,7 @@ function renderSheet() {
       <div class="sec"><div class="sec-title">Кто заказал козырь</div><div class="takers">${takers}</div></div>
       <div class="sec"><div class="sec-title">Козырь</div><div class="suits">${suits}</div></div>
       <div class="sec"><div class="sec-title">Очки за взятки (всего ${DEAL_TOTAL})</div><div class="tricks">${trickBox(0)}${trickBox(1)}</div>${pad}</div>
+      <div class="sec"><div class="sec-title">Как достался заказ</div>${phase}</div>
       <div class="sec"><div class="sec-title">Комбинации — у кого старшая</div>${declSec}</div>
     </div>
     <div class="sheet-foot">
@@ -1204,6 +1455,7 @@ function render() {
   else if (r === 'game') app.innerHTML = renderGame();
   else if (r === 'history') app.innerHTML = renderHistory();
   else if (r.startsWith('game-view/')) app.innerHTML = renderGameView(r.slice(10));
+  else if (r.startsWith('player/')) app.innerHTML = renderPlayer(r.slice(7));
   else if (r === 'stats') app.innerHTML = renderStats();
   else if (r === 'settings') app.innerHTML = renderSettings();
   else { location.replace('#home'); return; }
@@ -1298,7 +1550,11 @@ const ACTIONS = {
     nav('game');
   },
   openSheet: () => {
-    sheet = { editId: null, takerId: null, suit: null, decl: [emptyDecl(), emptyDecl()], declOwner: null, side: 0, tricksStr: '', kapot: null };
+    sheet = {
+      editId: null, takerId: null, suit: null, declOwner: null,
+      decl: [[emptyDecl(), emptyDecl()], [emptyDecl(), emptyDecl()]],
+      side: 0, tricksStr: '', kapot: null, callPhase: null, forced: false
+    };
     renderOverlays();
   },
   roundInfo: async d => {
@@ -1315,37 +1571,57 @@ const ACTIONS = {
     const g = activeGame();
     const r = g.rounds.find(x => x.id === d.rid);
     if (!r) return;
-    const decl = [{ ...emptyDecl(), ...r.declarations[0] }, { ...emptyDecl(), ...r.declarations[1] }];
+    const decl = r.declarers
+      ? r.declarers.map(pair => pair.map(x => ({ ...emptyDecl(), ...x })))
+      : [0, 1].map(t => [{ ...emptyDecl(), ...r.declarations[t] }, emptyDecl()]);
+    const seq = t => seqPoints(decl[t][0]) + seqPoints(decl[t][1]);
     sheet = {
       editId: r.id, takerId: r.trumpTakerId, suit: r.trumpSuit,
-      decl, declOwner: seqPoints(decl[0]) >= seqPoints(decl[1]) ? (seqPoints(decl[0]) ? 0 : null) : 1,
-      side: 0, tricksStr: String(r.trickPoints[0]), kapot: r.kapot ?? allTricksTeam(r)
+      decl, declOwner: seq(0) ? 0 : seq(1) ? 1 : null,
+      side: 0, tricksStr: String(r.trickPoints[0]), kapot: r.kapot ?? allTricksTeam(r),
+      callPhase: r.callPhase ?? null, forced: !!r.forced
     };
     renderOverlays();
   },
   sheetClose: () => { sheet = null; renderOverlays(); },
-  sheetTaker: d => { sheet.takerId = d.pid; updateSheet(); },
+  sheetTaker: d => {
+    sheet.takerId = d.pid;
+    const g = activeGame();
+    const idx = sheet.editId ? g.rounds.findIndex(r => r.id === sheet.editId) : g.rounds.length;
+    if (sheet.forced && dealerForRound(g, idx) !== d.pid) { sheet.forced = false; sheet.callPhase = null; }
+    updateSheet();
+  },
   sheetSuit: d => { sheet.suit = d.s; updateSheet(); },
+  sheetPhase: d => {
+    sheet.forced = d.p === 'forced';
+    sheet.callPhase = d.p === '1' ? 1 : 2;
+    updateSheet();
+  },
   declOwner: d => {
     const t = d.t === '' ? null : +d.t;
     const from = sheet.declOwner;
-    const seq = from === null ? { terz: 0, fifty: 0, deberc: 0 } : { terz: sheet.decl[from].terz, fifty: sheet.decl[from].fifty, deberc: sheet.decl[from].deberc };
-    [0, 1].forEach(i => Object.assign(sheet.decl[i], { terz: 0, fifty: 0, deberc: 0 }));
-    if (t !== null) Object.assign(sheet.decl[t], seq);
+    const seq = s => (from === null ? { terz: 0, fifty: 0, deberc: 0 }
+      : { terz: sheet.decl[from][s].terz, fifty: sheet.decl[from][s].fifty, deberc: sheet.decl[from][s].deberc });
+    const carry = [seq(0), seq(1)];
+    [0, 1].forEach(i => [0, 1].forEach(s => Object.assign(sheet.decl[i][s], { terz: 0, fifty: 0, deberc: 0 })));
+    if (t !== null) [0, 1].forEach(s => Object.assign(sheet.decl[t][s], carry[s]));
     sheet.declOwner = t;
     updateSheet();
   },
   declStep: d => {
     const t = sheet.declOwner;
     if (t === null) return;
+    const s = +d.s;
     const max = d.kind === 'terz' ? 4 : 2;
-    sheet.decl[t][d.kind] = Math.max(0, Math.min(max, (sheet.decl[t][d.kind] || 0) + (+d.d)));
+    sheet.decl[t][s][d.kind] = Math.max(0, Math.min(max, (sheet.decl[t][s][d.kind] || 0) + (+d.d)));
     updateSheet();
   },
   bella: d => {
     const t = +d.t;
-    sheet.decl[t].bella = !sheet.decl[t].bella;
-    if (sheet.decl[t].bella) sheet.decl[1 - t].bella = false;
+    const s = +d.s;
+    const on = !sheet.decl[t][s].bella;
+    [0, 1].forEach(i => [0, 1].forEach(j => { sheet.decl[i][j].bella = false; }));
+    sheet.decl[t][s].bella = on;
     updateSheet();
   },
   sheetSide: d => {
