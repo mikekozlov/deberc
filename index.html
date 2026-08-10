@@ -141,17 +141,20 @@ button { font:inherit; color:inherit; background:none; border:none; cursor:point
 .suits { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; }
 .suitbtn { min-height:64px; font-size:34px; border-radius:14px; background:var(--surface); border:2px solid var(--border); }
 .suitbtn.sel { border-color:var(--text2); background:var(--surface2); }
-.decl-col { border-radius:14px; background:var(--surface); border:1px solid var(--border); padding:10px; border-top:3px solid var(--t0); }
-.decl-col.dc1 { border-top-color:var(--t1); }
-.decl-head { font-size:13px; font-weight:700; color:var(--text2); margin-bottom:8px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.decl-row { display:flex; align-items:center; justify-content:space-between; gap:6px; margin:8px 0; font-size:15px; color:var(--text2); }
-.step { display:flex; align-items:center; gap:2px; }
-.step button { width:42px; height:42px; border-radius:10px; background:var(--surface2); font-size:22px; color:var(--text); }
-.step button:active { filter:brightness(1.3); }
-.step b { width:30px; text-align:center; font-size:18px; }
-.bella-btn { width:100%; min-height:44px; border-radius:10px; background:var(--surface2); border:1.5px solid var(--border);
-  font-weight:600; font-size:15px; margin-top:4px; }
-.bella-btn.on { border-color:var(--good); color:var(--good); background:rgba(12,163,12,0.12); }
+.dgrid { display:grid; grid-template-columns:minmax(0,1fr) repeat(4,46px); gap:6px 5px; align-items:center; }
+.dg-h { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.4px; color:var(--muted); text-align:center; }
+.dg-name { font-size:13px; font-weight:700; color:var(--text2); padding-left:8px; border-left:3px solid var(--t0);
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.dg-name.n1 { border-left-color:var(--t1); }
+.dcell { height:46px; border-radius:10px; background:var(--surface2); border:1.5px solid var(--border);
+  color:var(--text2); font-size:18px; font-weight:700; font-variant-numeric:tabular-nums; }
+.dcell:active { filter:brightness(1.3); }
+.dcell.on { color:var(--text); }
+.dcell.on.dt0 { border-color:var(--t0); background:var(--t0-soft); }
+.dcell.on.dt1 { border-color:var(--t1); background:var(--t1-soft); }
+.dcell.bella.on { border-color:var(--good); color:var(--good); background:rgba(12,163,12,0.12); }
+.dg-foot { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-top:8px; min-height:44px; }
+.dg-foot .dg-who { font-size:13px; color:var(--muted); }
 .tricks { display:flex; gap:10px; margin-bottom:12px; }
 .trick-box { flex:1; border-radius:14px; background:var(--surface); border:2px solid var(--border); padding:10px; text-align:center; }
 .trick-box.active { border-color:var(--t0); }
@@ -254,9 +257,6 @@ button { font:inherit; color:inherit; background:none; border:none; cursor:point
 .rd-k { color:var(--muted); font-size:13px; flex:0 0 auto; }
 .rd-v { color:var(--text); text-align:right; font-size:15px; }
 .rd-note { display:block; color:var(--muted); font-size:12px; }
-.chip.own0.sel { background:var(--t0-soft); border-color:var(--t0); color:var(--t0); }
-.chip.own1.sel { background:var(--t1-soft); border-color:var(--t1); color:var(--t1); }
-.bella-row { display:flex; gap:10px; }
 .brandbox { text-align:center; }
 .brand-suits { display:flex; gap:12px; justify-content:center; font-size:15px; color:var(--muted); margin-top:2px; }
 .home-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-top:12px; }
@@ -315,11 +315,10 @@ button { font:inherit; color:inherit; background:none; border:none; cursor:point
 .ph.warn.sel { border-color:var(--danger); color:var(--danger); }
 .ph[disabled] { opacity:0.35; pointer-events:none; }
 .ph-note { text-align:center; font-size:13px; color:var(--muted); margin-top:8px; }
-.decl-cols { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:10px; }
-.decl-cols .decl-row { font-size:14px; gap:2px; }
-.decl-cols .step button { width:34px; height:38px; font-size:20px; }
-.decl-cols .step b { width:20px; font-size:16px; }
-.bella-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+@media (max-width:360px) {
+  .dgrid { grid-template-columns:minmax(0,1fr) repeat(4,44px); gap:5px 4px; }
+  .dg-name { font-size:12px; padding-left:6px; }
+}
 .tabs { flex-wrap:wrap; }
 .tabs .tab { flex:1 1 28%; min-width:88px; font-size:14px; }
 .pcard { display:block; width:100%; text-align:left; background:var(--surface); border:1px solid var(--border);
@@ -365,12 +364,14 @@ button { font:inherit; color:inherit; background:none; border:none; cursor:point
 <div id="modal-root"></div>
 <div id="toast"></div>
 <script>
-const APP_VERSION = '1.7.2';
+const APP_VERSION = '1.8.0';
 const KEY = 'deberc.data';
 const CUR_SCHEMA = 4;
 const SYNC_URL = '/api/journal/deberc';
 const DEAL_TOTAL = 162;
 const DECL_PTS = { terz: 20, fifty: 50, bella: 20, deberc: 100 };
+const DECL_MAX = { terz: 2, fifty: 2, deberc: 1 };
+const DECL_NAMES = { terz: 'Терц', fifty: '50', deberc: 'Деберц' };
 const LYZHA_LIMIT = 13;
 const PENALTY = -100;
 const FREE_BATONS = 2;
@@ -1318,6 +1319,10 @@ function renderSettings() {
   </div>`;
 }
 
+function sheetDeclTeam() {
+  const seq = t => seqPoints(sheet.decl[t][0]) + seqPoints(sheet.decl[t][1]);
+  return seq(0) ? 0 : seq(1) ? 1 : null;
+}
 function sheetTricks() {
   if (sheet.kapot !== null) return sheet.kapot === 0 ? [DEAL_TOTAL, 0] : [0, DEAL_TOTAL];
   if (sheet.tricksStr === '') return null;
@@ -1352,24 +1357,29 @@ function renderSheet() {
   }).join('');
   const suits = Object.keys(SUITS).map(s =>
     `<button class="suitbtn ${SUIT_CLS[s]} ${sheet.suit === s ? 'sel' : ''}" data-action="sheetSuit" data-s="${s}" aria-label="${SUIT_NAMES[s]}" aria-pressed="${sheet.suit === s}">${SUITS[s]}</button>`).join('');
-  const own = sheet.declOwner;
-  const stepRow = (t, s, label, kind) => `<div class="decl-row"><span>${label}</span><div class="step">
-      <button data-action="declStep" data-s="${s}" data-kind="${kind}" data-d="-1">−</button><b>${sheet.decl[t][s][kind]}</b><button data-action="declStep" data-s="${s}" data-kind="${kind}" data-d="1">+</button></div></div>`;
-  const seatCol = (t, s) => `<div class="decl-col dc${t}">
-      <div class="decl-head">${esc(playerName(g.teams[t][s]))}</div>
-      ${stepRow(t, s, 'Терц', 'terz')}
-      ${stepRow(t, s, '50', 'fifty')}
-      ${stepRow(t, s, 'Деберц', 'deberc')}
-    </div>`;
-  const bellaBtn = (t, s) => `<button class="bella-btn ${sheet.decl[t][s].bella ? 'on' : ''}" data-action="bella" data-t="${t}" data-s="${s}">${esc(playerName(g.teams[t][s]))}${sheet.decl[t][s].bella ? ' ✓' : ''}</button>`;
-  const declSec = `<div class="chips">
-      <button class="chip own0 ${own === 0 ? 'sel' : ''}" data-action="declOwner" data-t="0">${esc(teamNames(g, 0))}</button>
-      <button class="chip own1 ${own === 1 ? 'sel' : ''}" data-action="declOwner" data-t="1">${esc(teamNames(g, 1))}</button>
-      <button class="chip ${own === null ? 'sel' : ''}" data-action="declOwner" data-t="">Ни у кого</button>
+  const own = sheetDeclTeam();
+  const cell = (t, s, kind) => {
+    const v = sheet.decl[t][s][kind];
+    return `<button class="dcell dt${t} ${v ? 'on' : ''}" data-action="declTap" data-t="${t}" data-s="${s}" data-kind="${kind}"
+      aria-label="${DECL_NAMES[kind]}, ${esc(playerName(g.teams[t][s]))} — ${v || 'нет'}">${v || '·'}</button>`;
+  };
+  const bellaCell = (t, s) => {
+    const on = sheet.decl[t][s].bella;
+    return `<button class="dcell bella ${on ? 'on' : ''}" data-action="bella" data-t="${t}" data-s="${s}"
+      aria-label="Белла, ${esc(playerName(g.teams[t][s]))}" aria-pressed="${on}">${on ? '✓' : '·'}</button>`;
+  };
+  const seatRow = (t, s) => `<div class="dg-name n${t}">${esc(playerName(g.teams[t][s]))}</div>`
+    + cell(t, s, 'terz') + cell(t, s, 'fifty') + cell(t, s, 'deberc') + bellaCell(t, s);
+  const declPts = own === null ? 0 : seqPoints(sheet.decl[own][0]) + seqPoints(sheet.decl[own][1]);
+  const anyDecl = own !== null || [0, 1].some(t => [0, 1].some(s => sheet.decl[t][s].bella));
+  const declSec = `<div class="dgrid">
+      <div></div><div class="dg-h">Терц</div><div class="dg-h">50</div><div class="dg-h">Деберц</div><div class="dg-h">Белла</div>
+      ${seatRow(0, 0)}${seatRow(0, 1)}${seatRow(1, 0)}${seatRow(1, 1)}
     </div>
-    ${own === null ? '' : `<div class="decl-cols">${seatCol(own, 0)}${seatCol(own, 1)}</div>`}
-    <div class="decl-row" style="margin-top:12px"><span>Белла · 20 — у кого</span></div>
-    <div class="bella-grid">${bellaBtn(0, 0)}${bellaBtn(0, 1)}${bellaBtn(1, 0)}${bellaBtn(1, 1)}</div>`;
+    <div class="dg-foot">
+      <span class="dg-who">${own === null ? 'Комбинации: нет' : `Пишет ${esc(teamNames(g, own))} · +${declPts}`}</span>
+      ${anyDecl ? '<button class="btn small ghost" data-action="declClear">Сбросить</button>' : ''}
+    </div>`;
   const tp = sheetTricks();
   const trickBox = t => `<div class="trick-box tb${t} ${sheet.kapot === null && sheet.side === t ? 'active' : ''}" data-action="sheetSide" data-i="${t}">
     <div class="tb-name">${esc(teamNames(g, t))}</div>
@@ -1409,9 +1419,9 @@ function renderSheet() {
       ${dl ? `<div class="dealer-tag">🃏 Раздаёт: <b>${esc(playerName(dl))}</b></div>` : ''}
       <div class="sec"><div class="sec-title">Кто заказал козырь</div><div class="takers">${takers}</div></div>
       <div class="sec"><div class="sec-title">Козырь</div><div class="suits">${suits}</div></div>
-      <div class="sec"><div class="sec-title">Очки за взятки (всего ${DEAL_TOTAL})</div><div class="tricks">${trickBox(0)}${trickBox(1)}</div>${pad}</div>
       <div class="sec"><div class="sec-title">Как достался заказ</div>${phase}</div>
       <div class="sec"><div class="sec-title">Комбинации — у кого старшая</div>${declSec}</div>
+      <div class="sec"><div class="sec-title">Очки за взятки (всего ${DEAL_TOTAL})</div><div class="tricks">${trickBox(0)}${trickBox(1)}</div>${pad}</div>
     </div>
     <div class="sheet-foot">
       ${preview}
@@ -1583,7 +1593,7 @@ const ACTIONS = {
   },
   openSheet: () => {
     sheet = {
-      editId: null, takerId: null, suit: null, declOwner: null,
+      editId: null, takerId: null, suit: null,
       decl: [[emptyDecl(), emptyDecl()], [emptyDecl(), emptyDecl()]],
       side: 0, tricksStr: '', kapot: null, callPhase: null, forced: false
     };
@@ -1606,10 +1616,8 @@ const ACTIONS = {
     const decl = r.declarers
       ? r.declarers.map(pair => pair.map(x => ({ ...emptyDecl(), ...x })))
       : [0, 1].map(t => [{ ...emptyDecl(), ...r.declarations[t] }, emptyDecl()]);
-    const seq = t => seqPoints(decl[t][0]) + seqPoints(decl[t][1]);
     sheet = {
-      editId: r.id, takerId: r.trumpTakerId, suit: r.trumpSuit,
-      decl, declOwner: seq(0) ? 0 : seq(1) ? 1 : null,
+      editId: r.id, takerId: r.trumpTakerId, suit: r.trumpSuit, decl,
       side: 0, tricksStr: String(r.trickPoints[0]), kapot: r.kapot ?? allTricksTeam(r),
       callPhase: r.callPhase ?? null, forced: !!r.forced
     };
@@ -1629,23 +1637,21 @@ const ACTIONS = {
     sheet.callPhase = d.p === '1' ? 1 : 2;
     updateSheet();
   },
-  declOwner: d => {
-    const t = d.t === '' ? null : +d.t;
-    const from = sheet.declOwner;
-    const seq = s => (from === null ? { terz: 0, fifty: 0, deberc: 0 }
-      : { terz: sheet.decl[from][s].terz, fifty: sheet.decl[from][s].fifty, deberc: sheet.decl[from][s].deberc });
-    const carry = [seq(0), seq(1)];
-    [0, 1].forEach(i => [0, 1].forEach(s => Object.assign(sheet.decl[i][s], { terz: 0, fifty: 0, deberc: 0 })));
-    if (t !== null) [0, 1].forEach(s => Object.assign(sheet.decl[t][s], carry[s]));
-    sheet.declOwner = t;
+  declTap: d => {
+    const t = +d.t;
+    const s = +d.s;
+    const cur = sheet.decl[t][s][d.kind] || 0;
+    const next = cur >= DECL_MAX[d.kind] ? 0 : cur + 1;
+    const other = 1 - t;
+    if (next > 0 && sheetDeclTeam() === other) {
+      [0, 1].forEach(j => Object.assign(sheet.decl[other][j], { terz: 0, fifty: 0, deberc: 0 }));
+      toast('Комбинации пишет только одна пара');
+    }
+    sheet.decl[t][s][d.kind] = next;
     updateSheet();
   },
-  declStep: d => {
-    const t = sheet.declOwner;
-    if (t === null) return;
-    const s = +d.s;
-    const max = d.kind === 'terz' ? 4 : 2;
-    sheet.decl[t][s][d.kind] = Math.max(0, Math.min(max, (sheet.decl[t][s][d.kind] || 0) + (+d.d)));
+  declClear: () => {
+    [0, 1].forEach(t => [0, 1].forEach(s => Object.assign(sheet.decl[t][s], emptyDecl())));
     updateSheet();
   },
   bella: d => {
