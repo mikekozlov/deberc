@@ -364,7 +364,7 @@ button { font:inherit; color:inherit; background:none; border:none; cursor:point
 <div id="modal-root"></div>
 <div id="toast"></div>
 <script>
-const APP_VERSION = '1.8.0';
+const APP_VERSION = '1.8.1';
 const KEY = 'deberc.data';
 const CUR_SCHEMA = 4;
 const SYNC_URL = '/api/journal/deberc';
@@ -854,7 +854,7 @@ function renderHome() {
 }
 
 function renderNew() {
-  if (!NG) NG = { slots: [null, null, null, null], target: String(data.settings.defaultTarget), dealer: null };
+  if (!NG) NG = { slots: [null, null, null, null], target: String(data.settings.defaultTarget) };
   const roster = data.players.filter(p => !p.archived && !NG.slots.includes(p.id));
   const slot = i => {
     const pid = NG.slots[i];
@@ -862,14 +862,12 @@ function renderNew() {
       ? `<button class="slot filled" data-action="clearSlot" data-i="${i}">${esc(playerName(pid))}</button>`
       : `<div class="slot">Игрок</div>`;
   };
-  const seated = NG.slots.filter(Boolean);
-  const dealerSec = seated.length === 4 ? `<div class="sec"><div class="sec-title">Кто раздаёт первым</div>
-      <div class="chips">${seated.map(pid => `<button class="chip ${NG.dealer === pid ? 'sel' : ''}" data-action="pickDealer" data-pid="${pid}">${esc(playerName(pid))}</button>`).join('')}</div>
-    </div>` : '';
-  const ready = NG.slots.every(Boolean) && !!NG.dealer && parseInt(NG.target, 10) >= 50;
+  const dealerNote = NG.slots[0] ? `<div class="dealer-tag">🃏 Первым раздаёт <b>${esc(playerName(NG.slots[0]))}</b> — первый в Паре 1</div>` : '';
+  const ready = NG.slots.every(Boolean) && parseInt(NG.target, 10) >= 50;
   return header('Новая игра', 'home') + `<div class="content">
     <div class="team-box"><div class="tb-title"><span class="dot d0"></span>Пара 1</div><div class="slots">${slot(0)}${slot(1)}</div></div>
     <div class="team-box tb1"><div class="tb-title"><span class="dot d1"></span>Пара 2</div><div class="slots">${slot(2)}${slot(3)}</div></div>
+    ${dealerNote}
     <div class="sec"><div class="sec-title">Игроки — нажмите, чтобы посадить</div>
       <div class="chips">
         ${roster.map(p => `<button class="chip" data-action="pickPlayer" data-pid="${p.id}">${esc(p.name)}</button>`).join('')}
@@ -877,7 +875,6 @@ function renderNew() {
       </div>
       ${!data.players.filter(p => !p.archived).length ? '<div class="empty">Добавьте игроков, чтобы начать</div>' : ''}
     </div>
-    ${dealerSec}
     <div class="sec"><div class="sec-title">Играем до</div>
       <input class="tinput" inputmode="numeric" pattern="[0-9]*" value="${esc(NG.target)}" data-input="newTarget">
     </div>
@@ -1571,21 +1568,20 @@ const ACTIONS = {
     NG.slots[i] = d.pid;
     render();
   },
-  clearSlot: d => { if (NG.dealer === NG.slots[+d.i]) NG.dealer = null; NG.slots[+d.i] = null; render(); },
-  pickDealer: d => { NG.dealer = d.pid; render(); },
+  clearSlot: d => { NG.slots[+d.i] = null; render(); },
   addPlayerNew: async () => {
     const p = await addPlayerFlow();
     if (p) { const i = NG.slots.indexOf(null); if (i !== -1) NG.slots[i] = p.id; }
     render();
   },
   startGame: () => {
-    if (!NG.slots.every(Boolean) || !NG.dealer) return;
+    if (!NG.slots.every(Boolean)) return;
     const t = parseInt(NG.target, 10);
     if (!(t >= 50)) { toast('Некорректная цель игры'); return; }
     data.games.push({
       id: uid('g'), createdAt: nowIso(), finishedAt: null, status: 'active',
       target: t, teams: [[NG.slots[0], NG.slots[1]], [NG.slots[2], NG.slots[3]]],
-      firstDealerId: NG.dealer, winnerTeam: null, rounds: []
+      firstDealerId: NG.slots[0], winnerTeam: null, rounds: []
     });
     save();
     NG = null;
