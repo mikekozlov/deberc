@@ -371,7 +371,7 @@ button { font:inherit; color:inherit; background:none; border:none; cursor:point
 <div id="modal-root"></div>
 <div id="toast"></div>
 <script>
-const APP_VERSION = '1.9.0';
+const APP_VERSION = '1.9.1';
 const KEY = 'deberc.data';
 const CUR_SCHEMA = 4;
 const SYNC_URL = '/api/journal/deberc';
@@ -640,6 +640,23 @@ function callKind(g, round, idx) {
 function gameTotals(game) {
   const rows = gameRows(game);
   return rows.length ? rows[rows.length - 1].cum : [0, 0];
+}
+function otherActiveGame(g) {
+  const a = activeGame();
+  return a && a.id !== g.id ? a : null;
+}
+async function blockedByActive(g) {
+  const busy = g.status === 'finished' && otherActiveGame(g);
+  if (!busy) return false;
+  await uiAlert('Идёт другая партия', `Не закончена партия «${esc(teamNames(busy, 0))}» против «${esc(teamNames(busy, 1))}». Правка завершённой партии может открыть её заново, а две идущие партии приложение не ведёт — сначала завершите или удалите текущую.`);
+  return true;
+}
+function earlyFinishRound(g) {
+  const rows = gameRows(g);
+  for (let i = 0; i < rows.length - 1; i++) {
+    if (detectWinner(rows[i].cum, g.target) !== null) return i + 1;
+  }
+  return null;
 }
 function detectWinner(totals, target) {
   if (totals[0] < target && totals[1] < target) return null;
@@ -1352,6 +1369,10 @@ function renderSettings() {
   </div>`;
 }
 
+function sheetGame() {
+  if (!sheet) return null;
+  return sheet.gid ? data.games.find(g => g.id === sheet.gid) : activeGame();
+}
 function sheetDeclTeam() {
   const seq = t => seqPoints(sheet.decl[t][0]) + seqPoints(sheet.decl[t][1]);
   return seq(0) ? 0 : seq(1) ? 1 : null;
@@ -1379,7 +1400,7 @@ function previewAfter(g, tp) {
   return gameRows({ ...g, rounds }).slice(-1)[0].cum;
 }
 function renderSheet() {
-  const g = activeGame();
+  const g = sheetGame();
   if (!g || !sheet) return '';
   const order = [g.teams[0][0], g.teams[0][1], g.teams[1][0], g.teams[1][1]];
   const rn = sheet.editId ? g.rounds.findIndex(r => r.id === sheet.editId) + 1 : g.rounds.length + 1;
@@ -1577,7 +1598,7 @@ async function addPlayerFlow() {
 function finishGame(g, w) {
   g.status = 'finished';
   g.winnerTeam = w;
-  g.finishedAt = nowIso();
+  g.finishedAt = g.finishedAt || nowIso();
   save();
   buzz([40, 90, 40, 90, 150]);
   sheet = null;
@@ -1627,8 +1648,10 @@ const ACTIONS = {
     nav('game');
   },
   openSheet: () => {
+    const g = activeGame();
+    if (!g) return;
     sheet = {
-      editId: null, takerId: null, suit: null,
+      gid: g.id, editId: null, takerId: null, suit: null,
       decl: [[emptyDecl(), emptyDecl()], [emptyDecl(), emptyDecl()]],
       side: 0, tricksStr: '', kapot: null, callPhase: null, forced: false
     };
@@ -1639,20 +1662,20 @@ const ACTIONS = {
     if (!g) return;
     const idx = g.rounds.findIndex(r => r.id === d.rid);
     if (idx < 0) return;
-    const buttons = [{ key: 'close', label: 'Закрыть', cls: 'ghost' }];
-    if (g.status === 'active') buttons.push({ key: 'edit', label: 'Исправить', cls: 'primary' });
+    const buttons = [{ key: 'close', label: 'Закрыть', cls: 'ghost' }, { key: 'edit', label: 'Исправить', cls: 'primary' }];
     const res = await modal({ title: 'Раунд ' + (idx + 1), body: roundDetailsHtml(g, gameRows(g), idx), buttons });
-    if (res.key === 'edit') ACTIONS.editRound({ rid: d.rid });
+    if (res.key === 'edit' && !(await blockedByActive(g))) ACTIONS.editRound({ rid: d.rid, gid: d.gid });
   },
   editRound: d => {
-    const g = activeGame();
+    const g = d.gid ? data.games.find(x => x.id === d.gid) : activeGame();
+    if (!g) return;
     const r = g.rounds.find(x => x.id === d.rid);
     if (!r) return;
     const decl = r.declarers
       ? r.declarers.map(pair => pair.map(x => ({ ...emptyDecl(), ...x })))
       : [0, 1].map(t => [{ ...emptyDecl(), ...r.declarations[t] }, emptyDecl()]);
     sheet = {
-      editId: r.id, takerId: r.trumpTakerId, suit: r.trumpSuit, decl,
+      gid: g.id, editId: r.id, takerId: r.trumpTakerId, suit: r.trumpSuit, decl,
       side: 0, tricksStr: String(r.trickPoints[0]), kapot: r.kapot ?? allTricksTeam(r),
       callPhase: r.callPhase ?? null, forced: !!r.forced
     };
@@ -1661,7 +1684,7 @@ const ACTIONS = {
   sheetClose: () => { sheet = null; renderOverlays(); },
   sheetTaker: d => {
     sheet.takerId = d.pid;
-    const g = activeGame();
+    const g = sheetGame();
     const idx = sheet.editId ? g.rounds.findIndex(r => r.id === sheet.editId) : g.rounds.length;
     if (sheet.forced && dealerForRound(g, idx) !== d.pid) { sheet.forced = false; sheet.callPhase = null; }
     updateSheet();
@@ -1723,7 +1746,9 @@ const ACTIONS = {
   },
   sheetSave: async () => {
     if (!sheetValid()) return;
-    const g = activeGame();
+    const g = sheetGame();
+    if (!g) return;
+    const wasFinished = g.status === 'finished';
     const tp = sheetTricks();
     const base = sheetRound(tp);
     if (sheet.editId) {
@@ -1740,6 +1765,27 @@ const ACTIONS = {
     buzz(saved && (saved.baton !== null || saved.lyzha !== null) ? [25, 70, 25] : 18);
     setTimeout(() => { freshRoundId = null; }, 1600);
     const w = detectWinner(gameTotals(g), g.target);
+    if (wasFinished) {
+      const early = earlyFinishRound(g);
+      sheet = null;
+      if (w === null) {
+        g.status = 'active';
+        g.winnerTeam = null;
+        save();
+        renderOverlays();
+        nav('game');
+        await uiAlert('Партия снова идёт', `После правки ни одна пара не набрала ${g.target} (счёт ${gameTotals(g).join(' : ')}). Партия открыта заново — допишите раунды.`);
+      } else {
+        const changed = w !== g.winnerTeam;
+        g.winnerTeam = w;
+        save();
+        renderOverlays();
+        render();
+        toast(changed ? 'Победитель изменился: ' + teamNames(g, w) : 'Раунд исправлен');
+        if (early) await uiAlert('Лишние раунды', `Цель достигнута уже на раунде ${early} из ${g.rounds.length}. Раунды после него в реальной партии не игрались — удалите их через «⋯» на экране партии.`);
+      }
+      return;
+    }
     if (w !== null) {
       if (sheet.editId) {
         sheet = null;
@@ -1771,7 +1817,30 @@ const ACTIONS = {
   viewMenu: async d => {
     const g = data.games.find(x => x.id === d.gid);
     if (!g) return;
-    const k = await uiMenu([{ key: 'del', label: 'Удалить партию', danger: true }]);
+    const items = [];
+    if (g.rounds.length) items.push({ key: 'delRound', label: 'Удалить последний раунд', danger: true });
+    items.push({ key: 'del', label: 'Удалить партию', danger: true });
+    const k = await uiMenu(items);
+    if (k === 'delRound') {
+      if (await blockedByActive(g)) return;
+      const ok = await uiConfirm('Удалить раунд', `Раунд ${g.rounds.length} будет удалён, счёт и статистика пересчитаются.`, 'Удалить', true);
+      if (!ok) return;
+      g.rounds.pop();
+      const w = detectWinner(gameTotals(g), g.target);
+      if (w === null) {
+        g.status = 'active';
+        g.winnerTeam = null;
+        save();
+        nav('game');
+        toast('Партия снова идёт');
+      } else {
+        g.winnerTeam = w;
+        save();
+        render();
+        toast('Раунд удалён');
+      }
+      return;
+    }
     if (k !== 'del') return;
     const ok = await uiConfirm('Удалить партию', `«${esc(teamNames(g, 0))}» против «${esc(teamNames(g, 1))}», ${fmtDT(g.finishedAt || g.createdAt)}. Партия исчезнет из истории, статистика пересчитается.`, 'Удалить', true);
     if (!ok) return;
@@ -1786,12 +1855,11 @@ const ACTIONS = {
     victory = null;
     g.status = 'active';
     g.winnerTeam = null;
-    g.finishedAt = null;
     save();
     const last = g.rounds[g.rounds.length - 1];
     nav('game');
     render();
-    ACTIONS.editRound({ rid: last.id });
+    ACTIONS.editRound({ rid: last.id, gid: g.id });
   },
   statsTab: d => { statsTab = d.tab; render(); },
   addPlayer: async () => { await addPlayerFlow(); render(); },
