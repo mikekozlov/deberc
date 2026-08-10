@@ -364,7 +364,7 @@ button { font:inherit; color:inherit; background:none; border:none; cursor:point
 <div id="modal-root"></div>
 <div id="toast"></div>
 <script>
-const APP_VERSION = '1.8.1';
+const APP_VERSION = '1.8.2';
 const KEY = 'deberc.data';
 const CUR_SCHEMA = 4;
 const SYNC_URL = '/api/journal/deberc';
@@ -862,12 +862,10 @@ function renderNew() {
       ? `<button class="slot filled" data-action="clearSlot" data-i="${i}">${esc(playerName(pid))}</button>`
       : `<div class="slot">Игрок</div>`;
   };
-  const dealerNote = NG.slots[0] ? `<div class="dealer-tag">🃏 Первым раздаёт <b>${esc(playerName(NG.slots[0]))}</b> — первый в Паре 1</div>` : '';
   const ready = NG.slots.every(Boolean) && parseInt(NG.target, 10) >= 50;
   return header('Новая игра', 'home') + `<div class="content">
     <div class="team-box"><div class="tb-title"><span class="dot d0"></span>Пара 1</div><div class="slots">${slot(0)}${slot(1)}</div></div>
     <div class="team-box tb1"><div class="tb-title"><span class="dot d1"></span>Пара 2</div><div class="slots">${slot(2)}${slot(3)}</div></div>
-    ${dealerNote}
     <div class="sec"><div class="sec-title">Игроки — нажмите, чтобы посадить</div>
       <div class="chips">
         ${roster.map(p => `<button class="chip" data-action="pickPlayer" data-pid="${p.id}">${esc(p.name)}</button>`).join('')}
