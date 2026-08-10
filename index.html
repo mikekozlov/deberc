@@ -371,7 +371,7 @@ button { font:inherit; color:inherit; background:none; border:none; cursor:point
 <div id="modal-root"></div>
 <div id="toast"></div>
 <script>
-const APP_VERSION = '1.8.4';
+const APP_VERSION = '1.9.0';
 const KEY = 'deberc.data';
 const CUR_SCHEMA = 4;
 const SYNC_URL = '/api/journal/deberc';
@@ -471,6 +471,8 @@ function save(stamp = true) {
   if (stamp) schedulePush();
 }
 
+const NO_KEY = 'нужна парольная фраза — введите её в Настройках';
+const BAD_KEY = 'парольная фраза не подходит';
 const syncState = { pushedAt: null, pulledAt: null, error: null, busy: false };
 let pushTimer = null;
 let lastPullTry = 0;
@@ -483,8 +485,19 @@ function parseCloud(d) {
   if (d.schemaVersion > CUR_SCHEMA) throw new Error('данные на сервере новее приложения — обновите приложение');
   return migrate(d);
 }
+const getSyncKey = () => { try { return localStorage.getItem('deberc.key') || ''; } catch { return ''; } };
+async function sha256Hex(s) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+async function keyHeaders(extra) {
+  const key = getSyncKey();
+  if (!key) throw new Error(NO_KEY);
+  return { 'X-Deberc-Key': await sha256Hex(key), ...extra };
+}
 async function fetchCloudData() {
-  const res = await fetch(SYNC_URL, { cache: 'no-store' });
+  const res = await fetch(SYNC_URL, { cache: 'no-store', headers: await keyHeaders() });
+  if (res.status === 401) throw new Error(BAD_KEY);
   if (!res.ok) throw new Error('HTTP ' + res.status);
   return parseCloud(await res.json());
 }
@@ -495,6 +508,7 @@ function applyCloud(d) {
 }
 async function pullCloud(force = false, auto = false) {
   if (syncState.busy) return false;
+  if (!getSyncKey()) { syncState.error = NO_KEY; return false; }
   if (auto && Date.now() - lastPullTry < 20000) return false;
   lastPullTry = Date.now();
   syncState.busy = true;
@@ -519,14 +533,16 @@ async function pullCloud(force = false, auto = false) {
 }
 async function pushCloud() {
   if (storeLocked) return false;
+  if (!getSyncKey()) { syncState.error = NO_KEY; return false; }
   if (syncState.busy) { schedulePush(); return false; }
   syncState.busy = true;
   try {
     const res = await fetch(SYNC_URL, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+      headers: await keyHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify(data)
     });
+    if (res.status === 401) throw new Error(BAD_KEY);
     if (res.status === 409) {
       const d = parseCloud(await res.json());
       if (d) { applyCloud(d); toast('На сервере данные новее — обновлено'); }
@@ -537,8 +553,9 @@ async function pushCloud() {
     syncState.error = null;
     return true;
   } catch (e) {
-    syncState.error = String(e.message || e);
-    toast('Не удалось отправить на сервер');
+    const msg = String(e.message || e);
+    syncState.error = msg;
+    toast(msg === BAD_KEY ? msg : 'Не удалось отправить на сервер');
     return false;
   } finally {
     syncState.busy = false;
@@ -819,6 +836,10 @@ function backupNagHtml() {
   if ((last && since < 5) || (!last && fin.length < 3)) return '';
   return `<button class="card notice" style="width:100%;text-align:left" data-action="nav" data-to="settings"><div>💾 ${last ? 'С последнего бэкапа сыграно игр: ' + since : 'Бэкап ещё ни разу не делался'}. Экспортируйте данные в Настройках.</div></button>`;
 }
+function keyNagHtml() {
+  if (getSyncKey()) return '';
+  return `<button class="card notice" style="width:100%;text-align:left" data-action="nav" data-to="settings"><div>🔑 Введите парольную фразу в Настройках — без неё журнал не синхронизируется с другими устройствами.</div></button>`;
+}
 function recentHtml() {
   const all = finishedGames().slice().sort((a, b) => (a.finishedAt < b.finishedAt ? 1 : -1));
   const games = all.slice(0, 3);
@@ -851,6 +872,7 @@ function renderHome() {
   </div></div>
   <div class="content">
     ${IS_IOS && !STANDALONE && !localStorage.getItem('deberc.hint') ? installHintHtml() : ''}
+    ${keyNagHtml()}
     ${backupNagHtml()}
     ${cont}
     <button class="bigbtn primary" data-action="goNew">Новая игра</button>
@@ -1294,14 +1316,19 @@ function renderSettings() {
   let syncStatus;
   if (syncState.busy) syncStatus = 'Синхронизация…';
   else if (syncState.error) syncStatus = `<span style="color:var(--danger)">Ошибка: ${esc(syncState.error)}</span>`;
-  else syncStatus = `Синхронизация с домашним ПК ✓${syncState.pushedAt ? ' · отправлено ' + fmtDT(syncState.pushedAt) : ''}`;
+  else syncStatus = `Облачный журнал ✓${syncState.pushedAt ? ' · отправлено ' + fmtDT(syncState.pushedAt) : ''}`;
   const syncSec = `<div class="sec"><div class="sec-title">Синхронизация</div>
     <div class="srow"><span class="sl">${syncStatus}</span></div>
     <div class="srow"><span class="sl">Получено с сервера: ${syncState.pulledAt ? fmtDT(syncState.pulledAt) : 'ещё нет'}</span></div>
+    <div class="srow"><span class="sl">Парольная фраза журнала</span></div>
+    <div style="display:flex;gap:10px;margin-top:6px;flex-wrap:wrap">
+      <input class="tinput" style="flex:1;min-width:150px;text-align:left" type="password" autocomplete="off" placeholder="${getSyncKey() ? '••••••••' : 'не задана'}" value="" data-input="syncKey">
+      <button class="btn primary" data-action="saveKey">Сохранить</button>
+    </div>
     <div style="display:flex;gap:10px;margin-top:12px;flex-wrap:wrap">
       <button class="btn ghost" data-action="pullForce">Заменить серверными</button>
     </div>
-    <div class="notice" style="margin-top:12px">Данные лежат на домашнем ПК и доступны только внутри тайнета. Все устройства в тайнете читают и пишут автоматически — вход, токены и ручное обновление не нужны. Если ПК спит, приложение работает локально и дошлёт данные позже. «Заменить серверными» — только на случай, когда на этом устройстве оказались неверные данные и их надо отбросить.</div>
+    <div class="notice" style="margin-top:12px">Журнал лежит в облаке, все устройства читают и пишут его автоматически. Фраза вводится один раз на устройство и хранится только в нём — без неё сервер не отдаёт и не принимает данные. Без сети приложение работает локально и дошлёт данные позже. «Заменить серверными» — только на случай, когда на этом устройстве оказались неверные данные и их надо отбросить.</div>
   </div>`;
   return header('Настройки', 'home') + `<div class="content">
     <div class="sec"><div class="sec-title">Игра</div>
@@ -1786,6 +1813,17 @@ const ACTIONS = {
     render();
   },
   exportData: () => doExport(),
+  saveKey: async () => {
+    const el = document.querySelector('[data-input="syncKey"]');
+    const v = (el ? el.value : '').trim();
+    if (!v) { toast('Фраза пустая'); return; }
+    try { localStorage.setItem('deberc.key', v); } catch { toast('Не удалось сохранить фразу'); return; }
+    syncState.error = null;
+    render();
+    const ok = await pullCloud(false, false);
+    toast(syncState.error ? syncState.error : ok ? 'Фраза принята, данные обновлены' : 'Фраза принята');
+    render();
+  },
   pullForce: async () => {
     const ok = await uiConfirm('Заменить серверными', 'Данные на этом устройстве будут заменены копией с сервера без сравнения дат.', 'Заменить', true);
     if (ok) await pullCloud(true);

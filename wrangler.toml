@@ -1,0 +1,8 @@
+name = "deberc"
+compatibility_date = "2026-08-01"
+pages_build_output_dir = "."
+
+[[d1_databases]]
+binding = "DB"
+database_name = "deberc-journal"
+database_id = "e128fa61-fb52-49ae-942c-0e03b6627555"
