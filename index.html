@@ -274,6 +274,8 @@ button { font:inherit; color:inherit; background:none; border:none; cursor:point
   border-radius:14px; background:var(--surface); border:1px solid var(--border); }
 .rec-row:active { background:var(--surface2); }
 .rec-date { font-size:12px; color:var(--muted); flex:0 0 auto; }
+.rec-more { width:100%; min-height:44px; margin-top:2px; border-radius:12px; background:transparent; color:var(--t1); font-size:14px; font-weight:600; }
+.rec-more:active { background:var(--surface); }
 .rec-teams { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:15px; font-weight:600; }
 .rec-score { flex:0 0 auto; font-size:16px; font-weight:700; font-variant-numeric:tabular-nums; }
 .rhead { display:flex; align-items:center; gap:6px; padding:2px 11px 4px; font-size:11px; font-weight:700;
@@ -369,7 +371,7 @@ button { font:inherit; color:inherit; background:none; border:none; cursor:point
 <div id="modal-root"></div>
 <div id="toast"></div>
 <script>
-const APP_VERSION = '1.8.3';
+const APP_VERSION = '1.8.4';
 const KEY = 'deberc.data';
 const CUR_SCHEMA = 4;
 const SYNC_URL = '/api/journal/deberc';
@@ -818,7 +820,8 @@ function backupNagHtml() {
   return `<button class="card notice" style="width:100%;text-align:left" data-action="nav" data-to="settings"><div>💾 ${last ? 'С последнего бэкапа сыграно игр: ' + since : 'Бэкап ещё ни разу не делался'}. Экспортируйте данные в Настройках.</div></button>`;
 }
 function recentHtml() {
-  const games = finishedGames().slice().sort((a, b) => (a.finishedAt < b.finishedAt ? 1 : -1)).slice(0, 3);
+  const all = finishedGames().slice().sort((a, b) => (a.finishedAt < b.finishedAt ? 1 : -1));
+  const games = all.slice(0, 3);
   if (!games.length) return '';
   const rows = games.map(g => {
     const t = gameTotals(g);
@@ -828,7 +831,9 @@ function recentHtml() {
       <span class="rec-score"><span style="color:var(--t0)">${t[0]}</span> : <span style="color:var(--t1)">${t[1]}</span></span>
     </button>`;
   }).join('');
-  return `<div class="sec"><div class="sec-title">Последние партии</div>${rows}</div>`;
+  const hidden = all.length - games.length;
+  return `<div class="sec"><div class="sec-title">Последние партии${hidden ? ` · ${games.length} из ${all.length}` : ''}</div>${rows}
+    ${hidden ? `<button class="rec-more" data-action="nav" data-to="history">Вся история · ещё ${hidden} →</button>` : ''}</div>`;
 }
 function renderHome() {
   const g = activeGame();
@@ -1154,7 +1159,7 @@ function playerCardHtml(pid, s) {
   return `<button class="pcard" data-action="nav" data-to="player/${pid}">
     <div class="pc-top"><span class="pc-name">${esc(playerName(pid))}</span><span class="pc-meta">${nGames(s.games)} · ${nWins(s.wins)}</span></div>
     ${wrHtml(pct(s.wins, s.games))}
-    <div class="pc-sub">заказы ${s.calls || 0}${s.calls ? ' (' + pct(s.callWins, s.calls) + '%)' : ''} · батоны ${s.batons} · серия ${st.cur} / ${st.best}</div>
+    <div class="pc-sub">заказы ${s.calls || 0}${s.calls ? ' (' + pct(s.callWins, s.calls) + '%)' : ''} · батоны ${s.batons}${s.lyzhas ? ' · лыжи ' + s.lyzhas : ''} · серия ${st.cur} / ${st.best}</div>
   </button>`;
 }
 function renderStats() {
@@ -1204,9 +1209,9 @@ function renderStats() {
     </div>`).join('');
     body = gap(detailedHands, totalHands, 'кто объявил комбинацию')
       + `<div class="stat-scroll"><table class="stat-table compact">
-        <thead><tr><th>Игрок</th><th>Терц</th><th>50</th><th>Деб</th><th>Белла</th><th>Очки</th><th title="Объявлений на 10 раздач">На 10</th></tr></thead>
+        <thead><tr><th>Игрок</th><th>Терц</th><th>50</th><th>Деб</th><th>Белла</th><th title="Сколько очков объявлено. В раздаче с батоном они уходят соперникам">Объявл.</th><th title="Объявлений на 10 раздач">На 10</th></tr></thead>
         <tbody>${rows}</tbody></table></div>
-      ${bars ? `<div class="sec"><div class="sec-title">Очки комбинациями</div><div class="legend-kinds">
+      ${bars ? `<div class="sec"><div class="sec-title">Объявлено комбинациями</div><div class="legend-kinds">
         <span><i class="k-first"></i>терц</span><span><i class="k-own"></i>полтинник</span><span><i class="k-foreign"></i>деберц</span><span><i class="k-left"></i>белла</span>
       </div>${bars}</div>` : ''}`;
   } else if (statsTab === 'pairs') {
@@ -1259,7 +1264,8 @@ function renderPlayer(pid) {
     <div class="sec"><div class="sec-title">Заказы</div><div class="card">
       ${row('Всего заказов', `${s.calls} из ${s.hands} раздач`)}
       ${row('Успешных', s.calls ? `${s.callWins} (${pct(s.callWins, s.calls)}%)` : '—')}
-      ${row('Батоны', s.batons)}
+      ${row('Батоны на своём заказе', s.batons)}
+      ${row('Лыжи пары', s.lyzhas)}
       ${row('Раздавал', s.deals)}
       <div class="kinds" style="margin-top:10px">${kindRows}</div>
     </div></div>
@@ -1269,7 +1275,7 @@ function renderPlayer(pid) {
       ${row('Полтинник', s.decl.fifty)}
       ${row('Деберц', s.decl.deberc)}
       ${row('Белла', s.decl.bella)}
-      ${row('Очков комбинациями', s.declPts)}
+      ${row('Объявлено очками', s.declPts)}
       ${row('На 10 раздач', per10(s.decl.terz + s.decl.fifty + s.decl.deberc + s.decl.bella, s.declHands))}
       ${s.declHands < s.hands ? `<div class="rd-note" style="margin-top:8px">детализация есть по ${s.declHands} раздачам из ${s.hands}</div>` : ''}
     </div></div>
