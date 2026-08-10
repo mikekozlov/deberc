@@ -129,8 +129,9 @@ button { font:inherit; color:inherit; background:none; border:none; cursor:point
   background:var(--bg); border-top:1px solid var(--border); display:flex; justify-content:center; }
 .sheet-foot .btn { width:100%; max-width:500px; min-height:58px; font-size:19px; }
 .takers { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; }
-.taker { border-radius:14px; padding:10px 4px; background:var(--surface); border:2px solid var(--border);
+.taker { position:relative; border-radius:14px; padding:10px 4px; background:var(--surface); border:2px solid var(--border);
   display:flex; flex-direction:column; align-items:center; gap:6px; min-height:96px; }
+.tk-deal { position:absolute; top:5px; right:6px; font-size:15px; line-height:1; }
 .taker .av { width:46px; height:46px; border-radius:50%; display:flex; align-items:center; justify-content:center;
   font-size:20px; font-weight:800; background:var(--surface2); }
 .taker.tt0 .av { background:var(--t0-soft); color:var(--t0); }
@@ -141,20 +142,20 @@ button { font:inherit; color:inherit; background:none; border:none; cursor:point
 .suits { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; }
 .suitbtn { min-height:64px; font-size:34px; border-radius:14px; background:var(--surface); border:2px solid var(--border); }
 .suitbtn.sel { border-color:var(--text2); background:var(--surface2); }
-.dgrid { display:grid; grid-template-columns:minmax(0,1fr) repeat(4,46px); gap:6px 5px; align-items:center; }
-.dg-h { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.4px; color:var(--muted); text-align:center; }
-.dg-name { font-size:13px; font-weight:700; color:var(--text2); padding-left:8px; border-left:3px solid var(--t0);
+.dgrid { display:grid; grid-template-columns:minmax(84px,1.15fr) repeat(4,minmax(46px,1fr)); gap:8px 6px; align-items:center; max-width:620px; }
+.dg-h { font-size:clamp(11px,2.6vw,14px); font-weight:700; text-transform:uppercase; letter-spacing:0.4px; color:var(--muted); text-align:center; }
+.dg-name { font-size:clamp(13px,3vw,18px); font-weight:700; color:var(--text2); padding-left:9px; border-left:4px solid var(--t0);
   overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .dg-name.n1 { border-left-color:var(--t1); }
-.dcell { height:46px; border-radius:10px; background:var(--surface2); border:1.5px solid var(--border);
-  color:var(--text2); font-size:18px; font-weight:700; font-variant-numeric:tabular-nums; }
+.dcell { height:clamp(46px,11vw,66px); border-radius:12px; background:var(--surface2); border:1.5px solid var(--border);
+  color:var(--text2); font-size:clamp(18px,4.4vw,26px); font-weight:700; font-variant-numeric:tabular-nums; }
 .dcell:active { filter:brightness(1.3); }
 .dcell.on { color:var(--text); }
 .dcell.on.dt0 { border-color:var(--t0); background:var(--t0-soft); }
 .dcell.on.dt1 { border-color:var(--t1); background:var(--t1-soft); }
 .dcell.bella.on { border-color:var(--good); color:var(--good); background:rgba(12,163,12,0.12); }
-.dg-foot { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-top:8px; min-height:44px; }
-.dg-foot .dg-who { font-size:13px; color:var(--muted); }
+.dg-foot { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-top:8px; min-height:44px; max-width:620px; }
+.dg-foot .dg-who { font-size:clamp(13px,3vw,16px); color:var(--muted); }
 .tricks { display:flex; gap:10px; margin-bottom:12px; }
 .trick-box { flex:1; border-radius:14px; background:var(--surface); border:2px solid var(--border); padding:10px; text-align:center; }
 .trick-box.active { border-color:var(--t0); }
@@ -252,6 +253,10 @@ button { font:inherit; color:inherit; background:none; border:none; cursor:point
 .chip.sel { background:var(--t1-soft); border-color:var(--t1); color:var(--t1); }
 .dealer-tag { text-align:center; font-size:15px; color:var(--text2); margin:0 0 14px; }
 .dealer-tag b { color:var(--text); }
+.dealer-line { text-align:center; margin:0 0 12px; }
+.dealer-pill { display:inline-flex; align-items:center; gap:9px; padding:9px 18px; border-radius:999px;
+  background:var(--surface); border:1px solid var(--border); color:var(--text2); font-size:clamp(15px,3.8vw,20px); }
+.dealer-pill b { color:var(--text); font-weight:800; }
 .rd-row { display:flex; align-items:baseline; justify-content:space-between; gap:12px; padding:8px 0; border-bottom:1px solid var(--grid); }
 .rd-row:last-child { border-bottom:0; }
 .rd-k { color:var(--muted); font-size:13px; flex:0 0 auto; }
@@ -285,7 +290,7 @@ button { font:inherit; color:inherit; background:none; border:none; cursor:point
 .sheet-backdrop { animation:fadein 0.2s ease; }
 .sheet { animation:slideup 0.24s cubic-bezier(0.2,0.8,0.25,1); }
 .sheet .sec { margin:12px 0; }
-.sheet .dealer-tag { margin-bottom:8px; }
+.sheet .dealer-line { margin-bottom:10px; }
 .sheet .taker { min-height:80px; padding:7px 4px; }
 .sheet .taker .av { width:38px; height:38px; font-size:17px; }
 .sheet .suitbtn { min-height:52px; font-size:29px; }
@@ -364,7 +369,7 @@ button { font:inherit; color:inherit; background:none; border:none; cursor:point
 <div id="modal-root"></div>
 <div id="toast"></div>
 <script>
-const APP_VERSION = '1.8.2';
+const APP_VERSION = '1.8.3';
 const KEY = 'deberc.data';
 const CUR_SCHEMA = 4;
 const SYNC_URL = '/api/journal/deberc';
@@ -1344,10 +1349,15 @@ function renderSheet() {
   const g = activeGame();
   if (!g || !sheet) return '';
   const order = [g.teams[0][0], g.teams[0][1], g.teams[1][0], g.teams[1][1]];
+  const rn = sheet.editId ? g.rounds.findIndex(r => r.id === sheet.editId) + 1 : g.rounds.length + 1;
+  const dl = dealerForRound(g, rn - 1);
   const takers = order.map((pid, i) => {
     const ti = i < 2 ? 0 : 1;
-    return `<button class="taker tt${ti} ${sheet.takerId === pid ? 'sel' : ''}" data-action="sheetTaker" data-pid="${pid}">
+    const deals = pid === dl;
+    return `<button class="taker tt${ti} ${sheet.takerId === pid ? 'sel' : ''}" data-action="sheetTaker" data-pid="${pid}"
+      aria-label="${esc(playerName(pid))}${deals ? ', раздаёт' : ''}" aria-pressed="${sheet.takerId === pid}">
       <span class="av">${initial(pid)}</span><span class="tk-name">${esc(playerName(pid))}</span>
+      ${deals ? '<span class="tk-deal" aria-hidden="true">🃏</span>' : ''}
     </button>`;
   }).join('');
   const suits = Object.keys(SUITS).map(s =>
@@ -1399,8 +1409,6 @@ function renderSheet() {
       <div class="pv-after">счёт станет ${after[0]} : ${after[1]}</div>
     </div></div>`;
   } else preview = '<div class="preview foot dim">Итог раунда появится после ввода</div>';
-  const n = sheet.editId ? g.rounds.findIndex(r => r.id === sheet.editId) + 1 : g.rounds.length + 1;
-  const dl = dealerForRound(g, n - 1);
   const dealerTook = !!(dl && sheet.takerId === dl);
   const phase = `<div class="phases">
       <button class="ph ${sheet.callPhase === 1 ? 'sel' : ''}" data-action="sheetPhase" data-p="1">1-й круг</button>
@@ -1409,9 +1417,9 @@ function renderSheet() {
     </div>
     ${sheet.callPhase === 2 && !sheet.forced && dl && sheet.takerId ? `<div class="ph-note">${teamOf(g, dl) === teamOf(g, sheet.takerId) ? 'полез в свои обязи' : 'полез в чужие обязи'}</div>` : ''}`;
   return `<div class="sheet-backdrop"></div><div class="sheet">
-    <div class="hdr"><button class="hbtn" data-action="sheetClose" aria-label="Закрыть без записи">✕</button><div class="htitle">Раунд ${n}</div><div class="hspace"></div></div>
+    <div class="hdr"><button class="hbtn" data-action="sheetClose" aria-label="Закрыть без записи">✕</button><div class="htitle">Раунд ${rn}</div><div class="hspace"></div></div>
     <div class="sheet-body">
-      ${dl ? `<div class="dealer-tag">🃏 Раздаёт: <b>${esc(playerName(dl))}</b></div>` : ''}
+      ${dl ? `<div class="dealer-line"><span class="dealer-pill">🃏 Раздаёт <b>${esc(playerName(dl))}</b></span></div>` : ''}
       <div class="sec"><div class="sec-title">Кто заказал козырь</div><div class="takers">${takers}</div></div>
       <div class="sec"><div class="sec-title">Козырь</div><div class="suits">${suits}</div></div>
       <div class="sec"><div class="sec-title">Как достался заказ</div>${phase}</div>
